@@ -1,0 +1,81 @@
+- # TIG - Development Tasks
+	- **Back to**: [[tig-index]]
+	- **Related**: [[tig-technical]] | [[tig-challenges]]
+	- ## Environment Setup
+	  collapsed:: true
+		- [ ] Document VICAR mount requirements (see [[tig-challenges#VICAR Distribution]])
+		- [ ] Document VICAR environment variable requirements
+		- [ ] Create container image recipe for base VICAR installation
+		- [ ] Test VICAR execution in container environment
+		- [ ] Research Flatpak packaging approach for VICAR
+		- [ ] Research Conda packaging approach for VICAR
+		- [ ] Set up version control (Git repository)
+		- [ ] Create container build/publish pipeline
+		- [ ] Set up CI/CD for testing across platforms
+	- ## Package Selection & Integration
+	  collapsed:: true
+		- **Priority**: Address M20 CWS gap (see [[tig-challenges#Package Inclusions]])
+		- [ ] Analyze M20 CWS functionality to replicate
+		- [ ] Create feature priority list (must-have vs nice-to-have)
+		- [ ] Evaluate Python scientific packages (NumPy, SciPy, etc.)
+		- [ ] Evaluate point cloud/mesh generation libraries (PCL, Open3D, CGAL)
+		- [ ] Evaluate workflow orchestration tools
+		- [ ] Test package compatibility with VICAR
+		- [ ] Create unified installation script/container recipe
+		- [ ] Document package versions and dependencies
+		- [ ] Test package compatibility in Conda environment
+		- [ ] Test package compatibility in Flatpak sandbox
+	- ## Core Functionality
+	  collapsed:: true
+		- **Reference**: [[tig-technical#Image Processing Pipeline]]
+		- [ ] Implement stereo image loading
+		- [ ] Integrate VICAR stereo processing
+		- [ ] Develop mesh generation pipeline
+		- [ ] Implement texture mapping
+		- [ ] Create output format handlers (OBJ, PLY, STL, GLTF)
+		- [ ] Add checkpoint/resume capability
+		- [ ] Implement progress monitoring
+		- [ ] Build error recovery mechanisms
+	- ## Convenience Scripts
+	  collapsed:: true
+		- **Reference**: [[tig-technical#Convenience Scripts]]
+		- [ ] Create batch processing scripts
+		- [ ] Implement configuration file system
+		- [ ] Add progress monitoring UI/CLI
+		- [ ] Build error handling framework
+		- [ ] Create documentation generator
+		- [ ] Develop data preparation scripts
+		- [ ] Write format conversion utilities
+		- [ ] Build validation and quality check tools
+	- ## Testing & Validation
+	  collapsed:: true
+		- [ ] Collect test stereo image pairs
+		- [ ] Create test suite for VICAR integration
+		- [ ] Validate mesh accuracy against known datasets
+		- [ ] Test texture quality
+		- [ ] Performance benchmarking
+		- [ ] Cross-platform testing (Linux, macOS, Windows via Conda)
+		- [ ] Test in container environments
+		- [ ] Test Flatpak sandbox
+		- [ ] Test Conda environments
+		- [ ] GPU acceleration testing
+	- ## Documentation
+	  collapsed:: true
+		- [ ] Write installation guide for each distribution method
+		- [ ] Create user manual for processing workflows
+		- [ ] Document VICAR command wrappers
+		- [ ] Write developer guide for extensions
+		- [ ] Create troubleshooting guide
+		- [ ] Document configuration options
+		- [ ] Build example workflows/tutorials
+	- ## Distribution & Release
+	  collapsed:: true
+		- **Reference**: [[tig-architecture#Packaging Strategy]]
+		- [ ] Build container images for multiple architectures
+		- [ ] Publish to container registries
+		- [ ] Create Flatpak manifest and test
+		- [ ] Submit to Flathub (if applicable)
+		- [ ] Create Conda package recipe
+		- [ ] Submit to conda-forge
+		- [ ] Create release notes
+		- [ ] Set up versioning strategy

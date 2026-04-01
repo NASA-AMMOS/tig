@@ -1,0 +1,30 @@
+- # TIG - Project Overview
+	- **Back to**: [[tig-index]]
+	- **Related**: [[tig-technical]] | [[tig-architecture]]
+	- ## Purpose
+		- Packaged environment for generating 3D meshes and textures from stereoscopic camera images
+		- Simplify complex scientific image processing workflows
+		- Make terrain reconstruction accessible to wider user base
+	- ## Core Technology
+		- **VICAR** (Video Image Communication and Retrieval)
+			- Open source image processing system
+			- Originally developed by NASA/JPL
+			- Specialized for scientific image analysis
+			- See [[tig-challenges#VICAR Distribution]] for installation issues
+	- ## Additional Components
+		- Convenience scripts to streamline the processing workflow
+		- Wrapper tools for VICAR commands
+		- Workflow orchestration (replacement for M20 CWS - see [[tig-challenges#Package Inclusions]])
+	- ## Key Features
+		- Stereoscopic image processing
+		- 3D mesh generation
+		- Texture mapping and generation
+		- Automated workflow through convenience scripts
+		- Integration with VICAR toolset
+		- Multiple distribution options (see [[tig-architecture#Packaging Strategy]])
+	- ## Target Users
+		- Planetary scientists
+		- Geological surveyors
+		- Terrain mapping specialists
+		- Researchers working with stereo imagery
+		- Anyone needing 3D reconstruction from stereo pairs

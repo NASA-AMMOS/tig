@@ -1,0 +1,42 @@
+# Dockerfile for VICAR TIG Demo
+# Extends vicar-tools:with-rpms with Python dependencies for TIG demo
+
+FROM vicar-tools:with-rpms
+
+LABEL maintainer="VICAR Team"
+LABEL description="VICAR tools with Python dependencies for TIG demo"
+LABEL version="1.0.0"
+
+# Install Python pip if not already installed
+RUN yum install -y python3-pip && \
+    yum clean all && \
+    rm -rf /var/cache/yum
+
+# Upgrade pip
+RUN python3 -m pip install --no-cache-dir --upgrade pip
+
+# Install Python dependencies for TIG demo
+RUN python3 -m pip install --no-cache-dir \
+    numpy>=1.20.0 \
+    scipy>=1.7.0 \
+    Pillow>=9.0.0 \
+    PyYAML>=5.4.0 \
+    click>=8.0.0
+
+# Optional: Install additional useful packages for development
+RUN python3 -m pip install --no-cache-dir \
+    matplotlib>=3.3.0
+
+# Verify installations
+RUN python3 -c "import numpy; print(f'numpy {numpy.__version__}')" && \
+    python3 -c "import scipy; print(f'scipy {scipy.__version__}')" && \
+    python3 -c "import PIL; print(f'Pillow {PIL.__version__}')" && \
+    python3 -c "import yaml; print(f'PyYAML imported successfully')" && \
+    python3 -c "import click; print(f'click {click.__version__}')" && \
+    echo "All Python dependencies installed successfully"
+
+# Set working directory
+WORKDIR /workspace
+
+# Default command
+CMD ["/bin/bash"]

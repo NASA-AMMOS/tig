@@ -1,0 +1,115 @@
+- # TIG - Research, Questions & Next Steps
+	- **Back to**: [[tig-index]]
+	- **Related**: [[tig-challenges]] | [[tig-development]]
+	- ## Research Topics
+	  collapsed:: true
+		- ### VICAR Research
+			- [ ] VICAR documentation and capabilities
+			- [ ] VICAR mount and environment variable requirements (see [[tig-challenges#VICAR Distribution]])
+			- [ ] VICAR stereo processing commands and workflows
+			- [ ] VICAR version compatibility across systems
+		- ### M20 CWS Analysis
+		  id:: m20-cws-analysis
+			- [ ] M20 Common Workflow Service architecture and features
+			- [ ] Document M20 CWS workflow capabilities
+			- [ ] Identify which features are essential vs nice-to-have
+			- [ ] Workflow orchestration alternatives (without M20 CWS)
+			- **Critical**: This is the functionality gap (see [[tig-challenges#Package Inclusions]])
+		- ### Technical Research
+			- [ ] Stereo photogrammetry algorithms
+			- [ ] Mesh optimization techniques
+			- [ ] Texture atlas generation methods
+			- [ ] Point cloud to mesh conversion algorithms
+		- ### Distribution Research
+			- [ ] Container best practices for scientific computing
+			- [ ] Flatpak packaging for scientific/CLI tools
+			- [ ] Conda packaging and conda-forge submission process
+			- [ ] GPU passthrough in containers vs Flatpak vs native
+		- ### Comparative Analysis
+			- [ ] Existing similar tools (comparison)
+			- [ ] Other stereo reconstruction software
+			- [ ] Competing terrain generation solutions
+	- ## Resources & References
+	  collapsed:: true
+		- ### VICAR
+			- VICAR project homepage: [Add link]
+			- VICAR documentation: [Add link]
+			- VICAR installation guides: [Add link]
+		- ### Scientific Computing
+			- Stereo vision papers and documentation
+			- 3D mesh generation algorithms
+			- Photogrammetry best practices
+		- ### Packaging & Distribution
+			- Flatpak documentation: https://docs.flatpak.org/
+			- Conda packaging guide: https://docs.conda.io/
+			- Container best practices: [Add link]
+		- ### M20 Mission
+			- Mars 2020 mission data: [Add link]
+			- M20 CWS documentation (if available): [Add link]
+	- ## Questions to Resolve
+	  collapsed:: true
+		- ### Use Case Questions
+			- What specific camera systems will be supported?
+			- What level of automation is desired?
+			- What are the target use cases (geological surveys, terrain mapping, etc.)?
+			- What are the input data size constraints?
+			- What level of mesh detail/resolution is required?
+			- Will this support real-time processing or batch only?
+			- Who are the primary users (researchers, operators, automated systems)?
+		- ### M20 CWS Replacement
+			- Which specific M20 CWS features are critical to replicate?
+			- Can we use existing workflow tools or need custom implementation?
+			- What is the scope of the initial release (minimal viable vs feature complete)?
+			- How much of M20 CWS was mission-specific vs generally useful?
+			- **See**: [[tig-challenges#Package Inclusions]]
+		- ### Distribution Strategy
+			- What base image to use for containers (Ubuntu, Alpine, CentOS)?
+			- How large is acceptable for container image?
+			- GPU support required from day one?
+			- Multi-architecture support needed initially?
+			- Which distribution method should be prioritized (container, Flatpak, or Conda)?
+			- Can we maintain feature parity across all distribution methods?
+			- Do different distribution methods serve different user bases?
+			- Should we support all three methods from v1.0, or phase them in?
+		- ### Technical Decisions
+			- Scripting language: Python, Bash, or both?
+			- Configuration format: YAML, JSON, TOML?
+			- Workflow orchestration: Custom, Airflow, Prefect, Snakemake?
+			- GPU acceleration: CUDA, OpenCL, Vulkan?
+			- Testing strategy: Unit, integration, end-to-end?
+	- ## Next Steps
+	  collapsed:: true
+		- ### Immediate Actions (Week 1-2)
+			- [ ] Document VICAR mount and environment requirements in detail
+			- [ ] Create proof-of-concept container image with VICAR
+			- [ ] Set up development environment and version control
+			- [ ] Begin documenting M20 CWS feature set
+		- ### Short-term Actions (Month 1)
+			- [ ] Analyze and document M20 CWS feature set completely
+			- [ ] Create feature prioritization matrix (essential vs optional)
+			- [ ] Prototype Flatpak packaging approach
+			- [ ] Prototype Conda environment setup
+			- [ ] Test basic VICAR stereo processing in each distribution method
+			- [ ] Identify package candidates to replace M20 CWS functionality
+		- ### Medium-term Actions (Months 2-3)
+			- [ ] Design convenience script architecture
+			- [ ] Evaluate trade-offs between distribution methods
+			- [ ] Implement core processing pipeline
+			- [ ] Create initial test suite
+			- [ ] Build prototype workflows
+		- ### Long-term Planning (Months 4+)
+			- [ ] Complete all three distribution methods
+			- [ ] Comprehensive testing and validation
+			- [ ] Documentation and tutorials
+			- [ ] Initial release preparation
+			- [ ] Community feedback and iteration
+	- ## Decision Log
+	  collapsed:: true
+		- **Format**: Document major decisions here as they're made
+		- ### Decisions Made
+			- *None yet - project in planning phase*
+		- ### Decisions Pending
+			- Primary distribution method priority
+			- M20 CWS replacement strategy
+			- Scripting language(s)
+			- Workflow orchestration approach

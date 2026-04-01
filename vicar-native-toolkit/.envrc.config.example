@@ -1,0 +1,99 @@
+# VICAR Native Toolkit Configuration
+# Copy this file to .envrc.local and customize for your setup
+# .envrc.local is gitignored and won't be committed
+
+# ===== Container Configuration =====
+# Container name (must be unique if running multiple instances)
+CONTAINER_NAME="vicar-sidecar"
+
+# Docker image to use (examples below)
+CONTAINER_IMAGE="vicar-tools:with-rpms"
+
+# Options:
+#   vicar-tools:local-binaries  - Built from source (development)
+#   vicar-tools:with-rpms       - M20-G87 RPM build
+#   vicar-tools:tig-demo        - With Python dependencies
+#   vicar-tools:latest          - Latest build
+#   custom-image:tag            - Your custom image
+
+# ===== VICAR Installation Paths (inside container) =====
+# These vary by image type - configure based on your image
+
+# For RPM-based images (vicar-tools:with-rpms, vicar-tools:tig-demo):
+VICAR_INSTALL_PREFIX="/usr/local/vicar/m20-g87"
+VICAR_BIN_PATHS=(
+    "/usr/local/bin"
+    "${VICAR_INSTALL_PREFIX}/p2/lib/x86-64-linx"
+    "${VICAR_INSTALL_PREFIX}/mars/lib/x86-64-linx"
+    "${VICAR_INSTALL_PREFIX}/tae53/bin/x86_64_linx"
+)
+VICAR_LIB_PATHS=(
+    "${VICAR_INSTALL_PREFIX}/olb/x86-64-linx"
+    "${VICAR_INSTALL_PREFIX}/mars/lib/x86-64-linx"
+)
+
+# For source-built images (vicar-tools:local-binaries):
+# VICAR_INSTALL_PREFIX="/usr/local/vicar/dev"
+# VICAR_BIN_PATHS=(
+#     "${VICAR_INSTALL_PREFIX}/p1/lib/x86-64-linx"
+#     "${VICAR_INSTALL_PREFIX}/p2/lib/x86-64-linx"
+#     "${VICAR_INSTALL_PREFIX}/p3/lib/x86-64-linx"
+#     "${VICAR_INSTALL_PREFIX}/mars/lib/x86-64-linx"
+#     "${VICAR_INSTALL_PREFIX}/tae53/bin/x86_64_linx"
+# )
+# VICAR_LIB_PATHS=(
+#     "${VICAR_INSTALL_PREFIX}/olb/x86-64-linx"
+#     "${VICAR_INSTALL_PREFIX}/html/lib/x86-64-linx"
+# )
+
+# ===== Environment Variables (inside container) =====
+# Set environment variables that VICAR/Mars tools need
+VICAR_ENV_VARS=(
+    "V2TOP=${VICAR_INSTALL_PREFIX}"
+    "R2LIB=${VICAR_INSTALL_PREFIX}"
+)
+
+# For missions with calibration data, add:
+# VICAR_ENV_VARS+=(
+#     "VICAR_PARAM=/project/calibration/param_files"
+#     "VICAR_CALIB=/project/calibration"
+# )
+
+# ===== Workspace Configuration =====
+WORKSPACE_ROOT="${PWD}/workspace"
+
+# ===== Additional Mounts (optional) =====
+# Uncomment and configure to mount additional directories
+
+# Camera models and calibration data
+# CAMERA_MODELS_DIR="/path/to/project/calibration"
+# CAMERA_MODELS_MOUNT="/project"
+
+# Mission data (read-only)
+# MISSION_DATA_DIR="/data/missions"
+# MISSION_DATA_MOUNT="/data/missions"
+
+# Mars pointing files
+# POINT_FILES_DIR="/proj/mars/def"
+# POINT_FILES_MOUNT="/proj/mars/def"
+
+# Parent directory for accessing sibling projects
+# PARENT_DIR="$(dirname ${PWD})"
+# PARENT_MOUNT="/projects"
+
+# ===== Wrapper Generation =====
+WRAPPER_DIR="${PWD}/.direnv/wrappers"
+
+# Auto-discover executables (true) or use manual list (false)
+AUTO_DISCOVER_TOOLS=true
+
+# If AUTO_DISCOVER_TOOLS=false, list tools manually:
+# MANUAL_TOOLS=(
+#     label hist gen size list
+#     marscorr marsxyz marsmap marsrad marstie
+#     vic2pic pic2vic
+# )
+
+# ===== Platform-Specific =====
+# Usually auto-detected, but can override if needed
+# HOST_OS="$(uname -s)"  # Darwin or Linux

@@ -1,0 +1,84 @@
+- # TIG - Current Challenges
+	- **Back to**: [[tig-index]]
+	- **Related**: [[tig-architecture]] | [[tig-development]]
+	- ## VICAR Distribution
+	  id:: vicar-distribution
+		- **Installation Complexity**: Difficult to install on modern systems
+		- **Mount Requirements**: Requires specific filesystem mounts to function
+		- **Environment Variables**: Complex environment variable setup needed for execution
+		- **Legacy Dependencies**: May have outdated system requirements
+		- ### Action Items
+			- [ ] Document exact VICAR installation steps on modern Linux
+			- [ ] Identify all required mounts and environment variables
+			- [ ] Test VICAR functionality in containerized environment
+		- **Impact**: This is the primary blocker for easy distribution
+		- **See also**: [[tig-architecture#Environment Architecture]] for solutions
+	- ## Environment Architecture
+	  id:: environment-architecture
+		- **Decision**: Most likely going with prepackaged container image route, but must also provide non-container options
+		- ### Container Approach (Primary)
+			- **Benefits**:
+				- Solves VICAR installation complexity
+				- Encapsulates all mount and environment variable requirements
+				- Provides consistent runtime environment
+				- Easier distribution and deployment
+			- **Considerations**:
+				- Container image size
+				- Volume mounting strategy for input/output data
+				- GPU access for processing (nvidia-container-toolkit)
+				- Multi-platform support (AMD64, ARM64)
+				- Container runtime options (Docker, Podman, etc.)
+			- **Action Items**:
+				- [ ] Create base container image with VICAR
+				- [ ] Design volume mounting strategy
+				- [ ] Test GPU passthrough in container
+		- ### Non-Container Distribution (Required)
+			- **Flatpak** (candidate):
+				- Sandboxed application distribution
+				- Cross-distro Linux support
+				- Portal API for filesystem access
+				- Good for GUI applications
+				- **Action Items**:
+					- [ ] Research Flatpak packaging for scientific tools
+					- [ ] Evaluate Flatpak compatibility with VICAR
+					- [ ] Test GPU acceleration in Flatpak sandbox
+					- [ ] Assess CLI tool support in Flatpak
+			- **Conda** (candidate):
+				- Popular in scientific Python community
+				- Cross-platform (Linux, macOS, Windows)
+				- Dependency management built-in
+				- Environment isolation without containers
+				- Well-suited for command-line tools
+				- **Action Items**:
+					- [ ] Research VICAR packaging for Conda
+					- [ ] Evaluate conda-forge submission requirements
+					- [ ] Test Conda environment on multiple platforms
+					- [ ] Assess binary distribution in Conda
+			- **Comparison & Strategy**:
+				- [ ] Evaluate which approach better handles VICAR complexity
+				- [ ] Compare distribution mechanisms and user experience
+				- [ ] Assess maintenance burden for each approach
+				- [ ] Consider supporting both Flatpak and Conda
+				- [ ] Determine if one approach is better for specific use cases
+		- **See also**: [[tig-architecture#Packaging Strategy]] for final decisions
+	- ## Package Inclusions
+	  id:: package-inclusions
+		- **Challenge**: Must decide what packages to include beyond VICAR
+		- ### M20 CWS Not Included
+			- **Mars 2020 adaptation of Common Workflow Service will NOT be included**
+			- M20 CWS has been the most complete implementation of TIG functionality
+			- Need to replicate or replace this functionality
+			- This is a **critical gap** that must be addressed
+		- ### Packages to Consider
+			- [ ] Python scientific stack (NumPy, SciPy, etc.)
+			- [ ] Point cloud processing (PCL, Open3D)
+			- [ ] Mesh generation tools (MeshLab, CGAL)
+			- [ ] Image processing (OpenCV, Pillow)
+			- [ ] Workflow orchestration (Airflow, Prefect, or custom)
+			- [ ] Visualization tools (optional)
+		- ### Functionality Gap Analysis
+			- [ ] Document what M20 CWS provided
+			- [ ] Identify which features are essential
+			- [ ] Determine replacement strategy for each feature
+			- [ ] Prioritize features for initial release
+		- **See also**: [[tig-research#M20 CWS Analysis]] for detailed analysis

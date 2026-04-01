@@ -1,0 +1,43 @@
+# direnv generated files
+.direnv/
+.envrc.cache
+.envrc.local
+
+# Backup files
+.envrc.backup
+
+# Workspace (user data)
+workspace/*
+!workspace/.gitkeep
+
+# Build artifacts
+*.log
+build/
+
+# Docker
+docker-compose.override.yml
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+._*
+.Spotlight-V100
+.Trashes
+
+# Linux
+*~
+.nfs*
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Temporary files
+tmp/
+temp/
+*.tmp

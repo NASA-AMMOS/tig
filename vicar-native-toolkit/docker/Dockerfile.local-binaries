@@ -1,0 +1,157 @@
+# VICAR Tools Container with Local Pre-built Binaries
+# Based on Oracle Linux 8 (RHEL-compatible)
+# This Dockerfile installs VICAR from local pre-compiled binaries
+
+FROM --platform=linux/amd64 oraclelinux:8
+
+# Set VICAR environment
+ENV V2TOP=/usr/local/vicar/dev
+ENV WORKSPACE=/usr/local/vicar
+ENV VICSYS=DEVELOPMENT
+ENV SHELL=/bin/bash
+ENV PATH="${V2TOP}/p2/lib/x86-64-linx:${V2TOP}/tae53/bin/x86_64_linx:${PATH}"
+ENV LD_LIBRARY_PATH="${V2TOP}/olb/x86-64-linx:${V2TOP}/p2/lib/x86-64-linx:${V2TOP}/mars/lib/x86-64-linx:${LD_LIBRARY_PATH}"
+
+# Enable PowerTools (CodeReady Builder) for additional packages
+RUN dnf install -y dnf-plugins-core && \
+    dnf config-manager --enable ol8_codeready_builder
+
+# Install runtime dependencies
+RUN dnf -y --nogpgcheck --setopt=install_weak_deps=False --setopt=tsflags=nodocs install \
+    # Essential runtime libraries
+    libgfortran \
+    libgomp \
+    libquadmath \
+    # Shells
+    tcsh \
+    bash \
+    # X11 runtime libraries
+    libX11 \
+    libXext \
+    libXmu \
+    libXi \
+    libXt \
+    xauth \
+    # Motif runtime
+    motif \
+    # Java runtime (headless for smaller size)
+    java-1.8.0-openjdk-headless \
+    # Python runtime
+    python39 \
+    # Image processing runtime libraries
+    libtiff \
+    libpng \
+    libjpeg-turbo \
+    # Network and system libraries
+    libcurl \
+    libtirpc \
+    sqlite-libs \
+    tbb \
+    openssl-libs \
+    tcl \
+    tk \
+    # Minimal utilities
+    less \
+    which \
+    findutils \
+    && dnf clean all
+
+# Create library compatibility symlinks
+RUN ln -sf /lib64/libtcl8.6.so /lib64/libtcl.so && \
+    ln -sf /lib64/libtk8.6.so /lib64/libtk.so && \
+    ln -sf /lib64/libcrypto.so /lib64/libcrypto.so 2>/dev/null || true
+
+# Create csh symlink
+RUN rm -f /bin/csh && ln -s /bin/tcsh /bin/csh
+
+# Create VICAR directory structure
+RUN mkdir -p ${WORKSPACE}/dev ${WORKSPACE}/build/{java,html/{bin,xsl}}
+
+# Copy VICAR binaries from local directory
+# This will be built with the context pointing to the parent directory
+COPY vicar-binaries/ ${WORKSPACE}/dev/
+
+# Create symbolic links for common VICAR commands in /usr/local/bin
+RUN ARCH_DIR="x86-64-linx" && \
+    TAE_ARCH_DIR="x86_64_linx" && \
+    echo "Creating wrapper scripts for VICAR commands..." && \
+    # Create wrappers for p2 programs (main VICAR commands)
+    if [ -d "${V2TOP}/p2/lib/$ARCH_DIR" ]; then \
+        for cmd in ${V2TOP}/p2/lib/$ARCH_DIR/*; do \
+            if [ -f "$cmd" ] && [ -x "$cmd" ]; then \
+                cmdname=$(basename "$cmd"); \
+                # Skip data files (they typically have extensions)
+                if [[ ! "$cmdname" =~ \. ]] && [[ "$cmdname" != "README" ]]; then \
+                    echo "#!/bin/bash" > /usr/local/bin/$cmdname; \
+                    echo "export V2TOP=${V2TOP}" >> /usr/local/bin/$cmdname; \
+                    echo "export WORKSPACE=${WORKSPACE}" >> /usr/local/bin/$cmdname; \
+                    echo "export VICSYS=DEVELOPMENT" >> /usr/local/bin/$cmdname; \
+                    echo "export PATH=${V2TOP}/p2/lib/$ARCH_DIR:${V2TOP}/tae53/bin/$TAE_ARCH_DIR:\$PATH" >> /usr/local/bin/$cmdname; \
+                    echo "export LD_LIBRARY_PATH=${V2TOP}/olb/$ARCH_DIR:${V2TOP}/p2/lib/$ARCH_DIR:${V2TOP}/mars/lib/$ARCH_DIR:\$LD_LIBRARY_PATH" >> /usr/local/bin/$cmdname; \
+                    echo "exec ${V2TOP}/p2/lib/$ARCH_DIR/$cmdname \"\$@\"" >> /usr/local/bin/$cmdname; \
+                    chmod +x /usr/local/bin/$cmdname; \
+                fi; \
+            fi; \
+        done; \
+        echo "Created wrappers for p2 programs"; \
+    fi && \
+    # Create wrappers for Mars programs
+    if [ -d "${V2TOP}/mars/lib/$ARCH_DIR" ]; then \
+        for cmd in ${V2TOP}/mars/lib/$ARCH_DIR/*; do \
+            if [ -f "$cmd" ] && [ -x "$cmd" ]; then \
+                cmdname=$(basename "$cmd"); \
+                if [[ ! "$cmdname" =~ \. ]] && [[ "$cmdname" != "README" ]]; then \
+                    echo "#!/bin/bash" > /usr/local/bin/$cmdname; \
+                    echo "export V2TOP=${V2TOP}" >> /usr/local/bin/$cmdname; \
+                    echo "export WORKSPACE=${WORKSPACE}" >> /usr/local/bin/$cmdname; \
+                    echo "export VICSYS=DEVELOPMENT" >> /usr/local/bin/$cmdname; \
+                    echo "export PATH=${V2TOP}/mars/lib/$ARCH_DIR:${V2TOP}/p2/lib/$ARCH_DIR:${V2TOP}/tae53/bin/$TAE_ARCH_DIR:\$PATH" >> /usr/local/bin/$cmdname; \
+                    echo "export LD_LIBRARY_PATH=${V2TOP}/olb/$ARCH_DIR:${V2TOP}/mars/lib/$ARCH_DIR:${V2TOP}/p2/lib/$ARCH_DIR:\$LD_LIBRARY_PATH" >> /usr/local/bin/$cmdname; \
+                    echo "exec ${V2TOP}/mars/lib/$ARCH_DIR/$cmdname \"\$@\"" >> /usr/local/bin/$cmdname; \
+                    chmod +x /usr/local/bin/$cmdname; \
+                fi; \
+            fi; \
+        done; \
+        echo "Created wrappers for Mars programs"; \
+    fi && \
+    # Create wrappers for TAE programs
+    if [ -d "${V2TOP}/tae53/bin/$TAE_ARCH_DIR" ]; then \
+        for cmd in ${V2TOP}/tae53/bin/$TAE_ARCH_DIR/*; do \
+            if [ -f "$cmd" ] && [ -x "$cmd" ]; then \
+                cmdname=$(basename "$cmd"); \
+                if [[ ! "$cmdname" =~ \. ]] && [[ "$cmdname" != "README" ]]; then \
+                    echo "#!/bin/bash" > /usr/local/bin/$cmdname; \
+                    echo "export V2TOP=${V2TOP}" >> /usr/local/bin/$cmdname; \
+                    echo "export WORKSPACE=${WORKSPACE}" >> /usr/local/bin/$cmdname; \
+                    echo "export VICSYS=DEVELOPMENT" >> /usr/local/bin/$cmdname; \
+                    echo "export PATH=${V2TOP}/tae53/bin/$TAE_ARCH_DIR:${V2TOP}/p2/lib/$ARCH_DIR:\$PATH" >> /usr/local/bin/$cmdname; \
+                    echo "export LD_LIBRARY_PATH=${V2TOP}/olb/$ARCH_DIR:${V2TOP}/p2/lib/$ARCH_DIR:\$LD_LIBRARY_PATH" >> /usr/local/bin/$cmdname; \
+                    echo "exec ${V2TOP}/tae53/bin/$TAE_ARCH_DIR/$cmdname \"\$@\"" >> /usr/local/bin/$cmdname; \
+                    chmod +x /usr/local/bin/$cmdname; \
+                fi; \
+            fi; \
+        done; \
+        echo "Created wrappers for TAE programs"; \
+    fi && \
+    echo "Wrapper creation complete"
+
+# Verify installation
+RUN echo "===== VICAR Installation Verification =====" && \
+    echo "V2TOP: $V2TOP" && \
+    echo "WORKSPACE: $WORKSPACE" && \
+    echo "" && \
+    echo "Checking for key VICAR executables:" && \
+    ls -lh ${V2TOP}/p2/lib/x86-64-linx/label 2>/dev/null && echo "✓ Found label" || echo "✗ label not found" && \
+    ls -lh ${V2TOP}/p2/lib/x86-64-linx/gen 2>/dev/null && echo "✓ Found gen" || echo "✗ gen not found" && \
+    ls -lh ${V2TOP}/p2/lib/x86-64-linx/list 2>/dev/null && echo "✓ Found list" || echo "✗ list not found" && \
+    echo "" && \
+    echo "VICAR programs available in /usr/local/bin:" && \
+    ls /usr/local/bin | head -20 && \
+    echo "..." && \
+    echo "Total wrappers created: $(ls -1 /usr/local/bin | wc -l)"
+
+# Set working directory
+WORKDIR /workspace
+
+# Default command (keep container running)
+CMD ["tail", "-f", "/dev/null"]

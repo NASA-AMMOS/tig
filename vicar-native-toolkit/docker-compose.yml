@@ -1,0 +1,47 @@
+services:
+  vicar-toolkit:
+    # Use the RPM-based image instead of building from source
+    image: vicar-tools:with-rpms
+    container_name: vicar-sidecar
+    
+    # Keep container running
+    command: tail -f /dev/null
+    
+    # Working directory
+    working_dir: /workspace
+    
+    # Environment variables
+    # Note: V2TOP is dynamically set in the image based on installed RPMs
+    environment:
+      - WORKSPACE=/usr/local/vicar
+      - VICSYS=DEVELOPMENT
+    
+    # Volumes - mount workspace
+    volumes:
+      - ./workspace:/workspace
+      # Linux X11 socket (commented out for macOS, will be overridden by .envrc)
+      # - /tmp/.X11-unix:/tmp/.X11-unix
+      # - ${HOME}/.Xauthority:/root/.Xauthority:ro
+    
+    # Network mode (differs by platform)
+    # Linux: host mode works well
+    # macOS: bridge mode with host.docker.internal
+    # network_mode: host  # Uncomment for Linux
+    
+    # For GUI applications - DISPLAY will be set by .envrc
+    # environment:
+    #   - DISPLAY=${DISPLAY}  # Linux
+    #   - DISPLAY=host.docker.internal:0  # macOS
+    
+    # Restart policy
+    restart: unless-stopped
+    
+    # Resource limits (optional)
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '4'
+    #       memory: 8G
+    #     reservations:
+    #       cpus: '2'
+    #       memory: 4G

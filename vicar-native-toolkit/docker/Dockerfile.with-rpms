@@ -1,0 +1,386 @@
+# VICAR Tools Container with Prebuilt RPMs (Optimized Single-Stage Build)
+# Based on Oracle Linux 8.9 (RHEL-compatible)
+# This Dockerfile installs VICAR from prebuilt RPM packages
+# Note: Single-stage is required because RPM installation needs certificates during build
+
+FROM --platform=linux/amd64 oraclelinux:8.9 AS runtime
+
+# Set VICAR environment
+# Note: V2TOP will be dynamically determined after RPM installation
+ENV WORKSPACE=/usr/local/vicar
+ENV VICSYS=DEVELOPMENT
+ENV SHELL=/bin/bash
+
+# Enable PowerTools (CodeReady Builder) for additional packages
+RUN dnf install -y dnf-plugins-core && \
+    dnf config-manager --enable ol8_codeready_builder
+
+# Install JPL Internal CA Certificates (required for Artifactory access)
+# Always install for JPL Artifactory - no conditional needed
+RUN echo "Installing JPL Internal CA certificates..." && \
+    cd /tmp && \
+    # Install tools needed for certificate handling (and ca-certificates package)
+    dnf install -y unzip openssl ca-certificates && \
+    # Download and extract JPL certificates
+    curl -sSk -o JPLICA.zip "https://ssl.jpl.nasa.gov/certs/JPLICA.zip" && \
+    unzip -q JPLICA.zip && \
+    rm -rf __MACOSX JPLICA.zip && \
+    # Convert PEM to CRT and install to trust store
+    mkdir -p /etc/pki/ca-trust/source/anchors && \
+    openssl x509 -in JPLICA/JPLICA.Root.pem -inform PEM \
+        -out /etc/pki/ca-trust/source/anchors/JPLICA.Root.crt && \
+    openssl x509 -in JPLICA/JPLICA.Issuing1.pem -inform PEM \
+        -out /etc/pki/ca-trust/source/anchors/JPLICA.Issuing1.crt && \
+    # Update system trust store and verify
+    update-ca-trust extract && \
+    echo "Installed certificates:" && \
+    ls -la /etc/pki/ca-trust/source/anchors/ && \
+    # Verify certificate is in the bundle
+    echo "Verifying JPL certs in bundle:" && \
+    grep -q "JPL" /etc/pki/tls/certs/ca-bundle.crt && echo "✓ JPL certs found in CA bundle" || echo "⚠ JPL certs NOT in bundle" && \
+    # Test connectivity to Artifactory
+    echo "Testing Artifactory connectivity:" && \
+    curl -sS --head https://artifactory.jpl.nasa.gov/ | head -1 || echo "⚠ Artifactory test failed" && \
+    # Clean up temporary files and tools we don't need at runtime
+    rm -rf /tmp/JPLICA && \
+    dnf remove -y unzip && \
+    dnf clean all && \
+    echo "✓ JPL CA certificates installed and verified"
+
+# Install runtime dependencies with optimizations
+# Use --setopt flags to minimize package installations
+RUN dnf -y --nogpgcheck --setopt=install_weak_deps=False --setopt=tsflags=nodocs install \
+    # Essential runtime libraries
+    libgfortran \
+    libgomp \
+    libquadmath \
+    # Shells (minimal)
+    tcsh \
+    bash \
+    # X11 runtime libraries (minimal set)
+    libX11 \
+    libXext \
+    libXmu \
+    libXi \
+    libXt \
+    xauth \
+    # Motif runtime
+    motif \
+    # Java runtime (headless for smaller size)
+    java-1.8.0-openjdk-headless \
+    # Python runtime (no dev tools)
+    python39 \
+    # Image processing runtime libraries
+    libtiff \
+    libpng \
+    libjpeg-turbo \
+    # Network and system libraries
+    libcurl \
+    libtirpc \
+    sqlite-libs \
+    tbb \
+    openssl-libs \
+    tcl \
+    tk \
+    # Minimal utilities (only essential ones)
+    less \
+    && dnf clean all
+
+# Create library compatibility symlinks
+RUN ln -sf /lib64/libtcl8.6.so /lib64/libtcl.so && \
+    ln -sf /lib64/libtk8.6.so /lib64/libtk.so && \
+    ln -sf /lib64/libcrypto.so /lib64/libcrypto.so 2>/dev/null || true
+
+# Create csh symlink
+RUN rm -f /bin/csh && ln -s /bin/tcsh /bin/csh
+
+# Create VICAR directory structure
+# RPMs will create version-specific subdirectories (e.g., dev, m20-g87, etc.)
+RUN mkdir -p ${WORKSPACE}/build/{java,html/{bin,xsl}}
+
+# Add VICAR RPM repository configuration
+COPY rpm-repo.repo /etc/yum.repos.d/vicar.repo
+
+# Install VICAR RPM packages with optimizations
+# Note: Must happen after certificates are installed and trusted
+# DNF should automatically resolve dependencies between vicar packages
+RUN echo "Installing VICAR RPM packages..." && \
+    dnf -y --nogpgcheck --setopt=install_weak_deps=False --setopt=tsflags=nodocs install \
+        vicar-m20-g87-all \
+        vicar-external-* && \
+    dnf clean all
+
+# Detect and configure VICAR installation path
+# Different VICAR RPMs install to different subdirectories:
+#   vicar-dev-all      -> /usr/local/vicar/dev
+#   vicar-m20-g87-all  -> /usr/local/vicar/m20-g87 (currently used)
+#   etc.
+RUN echo "===== Detecting VICAR Installation =====" && \
+    echo "Installed VICAR RPM packages:" && \
+    rpm -qa | grep -i vicar && \
+    echo "" && \
+    echo "Looking for VICAR installation directory..." && \
+    VICAR_DIRS=$(find ${WORKSPACE} -mindepth 1 -maxdepth 1 -type d ! -name build ! -name external 2>/dev/null) && \
+    echo "Found directories: $VICAR_DIRS" && \
+    for dir in $VICAR_DIRS; do \
+        if [ -f "$dir/Cshrc" ] || [ -d "$dir/tae53" ]; then \
+            V2TOP_DETECTED=$dir; \
+            echo "✓ Detected VICAR installation at: $V2TOP_DETECTED"; \
+            break; \
+        fi; \
+    done && \
+    if [ -z "$V2TOP_DETECTED" ]; then \
+        echo "✗ Could not detect VICAR installation directory"; \
+        echo "   Available directories:"; \
+        ls -la ${WORKSPACE}/; \
+        exit 1; \
+    fi && \
+    echo "$V2TOP_DETECTED" > /etc/vicar_v2top && \
+    echo "✓ V2TOP set to: $V2TOP_DETECTED"
+
+# Create wrapper scripts for all VICAR/TAE binaries in /usr/local/bin
+# This ensures they're in the default PATH for docker exec
+# TAE binaries are in architecture-specific subdirectories
+RUN V2TOP=$(cat /etc/vicar_v2top) && \
+    echo "Creating wrapper scripts for VICAR commands..." && \
+    ARCH_DIR="x86-64-linx" && \
+    TAE_ARCH_DIR="x86_64_linx" && \
+    # Build comprehensive library path including all external libraries
+    VICAR_LIB_PATH="$V2TOP/olb/$ARCH_DIR:$V2TOP/mars/lib/$ARCH_DIR" && \
+    for extlib in /usr/local/vicar/external/*/v*/$ARCH_DIR/lib /usr/local/vicar/external/*/v*/$ARCH_DIR/lib64 /usr/local/vicar/external/*/v*/$ARCH_DIR; do \
+        if [ -d "$extlib" ]; then \
+            VICAR_LIB_PATH="$VICAR_LIB_PATH:$extlib"; \
+        fi; \
+    done && \
+    echo "Built library path with $(echo $VICAR_LIB_PATH | tr ':' '\n' | wc -l) directories" && \
+    # Create wrappers for VICAR p2 programs (main VICAR commands)
+    if [ -d "$V2TOP/p2/lib/$ARCH_DIR" ]; then \
+        for cmd in $V2TOP/p2/lib/$ARCH_DIR/*; do \
+            if [ -f "$cmd" ] && [ -x "$cmd" ]; then \
+                cmdname=$(basename "$cmd"); \
+                # Skip data files (they have extensions usually)
+                if [[ ! "$cmdname" =~ \. ]]; then \
+                    echo "#!/bin/bash" > /usr/local/bin/$cmdname; \
+                    echo "export V2TOP=$V2TOP" >> /usr/local/bin/$cmdname; \
+                    echo "export WORKSPACE=/usr/local/vicar" >> /usr/local/bin/$cmdname; \
+                    echo "export VICSYS=DEVELOPMENT" >> /usr/local/bin/$cmdname; \
+                    echo "export LD_LIBRARY_PATH=$VICAR_LIB_PATH:\$LD_LIBRARY_PATH" >> /usr/local/bin/$cmdname; \
+                    echo "export PATH=$V2TOP/p2/lib/$ARCH_DIR:$V2TOP/tae53/bin/$TAE_ARCH_DIR:\$PATH" >> /usr/local/bin/$cmdname; \
+                    echo "exec $cmd \"\$@\"" >> /usr/local/bin/$cmdname; \
+                    chmod +x /usr/local/bin/$cmdname; \
+                fi; \
+            fi; \
+        done; \
+        echo "✓ Created wrappers for VICAR p2 commands"; \
+    fi && \
+    # Create wrappers for VICAR p3 programs if they exist
+    if [ -d "$V2TOP/p3/lib/$ARCH_DIR" ]; then \
+        for cmd in $V2TOP/p3/lib/$ARCH_DIR/*; do \
+            if [ -f "$cmd" ] && [ -x "$cmd" ]; then \
+                cmdname=$(basename "$cmd"); \
+                if [[ ! "$cmdname" =~ \. ]] && [ ! -f "/usr/local/bin/$cmdname" ]; then \
+                    echo "#!/bin/bash" > /usr/local/bin/$cmdname; \
+                    echo "export V2TOP=$V2TOP" >> /usr/local/bin/$cmdname; \
+                    echo "export WORKSPACE=/usr/local/vicar" >> /usr/local/bin/$cmdname; \
+                    echo "export VICSYS=DEVELOPMENT" >> /usr/local/bin/$cmdname; \
+                    echo "export LD_LIBRARY_PATH=$VICAR_LIB_PATH:\$LD_LIBRARY_PATH" >> /usr/local/bin/$cmdname; \
+                    echo "export PATH=$V2TOP/p3/lib/$ARCH_DIR:$V2TOP/p2/lib/$ARCH_DIR:\$PATH" >> /usr/local/bin/$cmdname; \
+                    echo "exec $cmd \"\$@\"" >> /usr/local/bin/$cmdname; \
+                    chmod +x /usr/local/bin/$cmdname; \
+                fi; \
+            fi; \
+        done; \
+        echo "✓ Created wrappers for VICAR p3 commands"; \
+    fi && \
+    # Create wrappers for TAE binaries (in architecture-specific subdirectory)
+    if [ -d "$V2TOP/tae53/bin/$TAE_ARCH_DIR" ]; then \
+        for cmd in $V2TOP/tae53/bin/$TAE_ARCH_DIR/*; do \
+            if [ -f "$cmd" ] && [ -x "$cmd" ]; then \
+                cmdname=$(basename "$cmd"); \
+                if [ ! -f "/usr/local/bin/$cmdname" ]; then \
+                    echo "#!/bin/bash" > /usr/local/bin/$cmdname; \
+                    echo "export V2TOP=$V2TOP" >> /usr/local/bin/$cmdname; \
+                    echo "export WORKSPACE=/usr/local/vicar" >> /usr/local/bin/$cmdname; \
+                    echo "export VICSYS=DEVELOPMENT" >> /usr/local/bin/$cmdname; \
+                    echo "export LD_LIBRARY_PATH=$VICAR_LIB_PATH:\$LD_LIBRARY_PATH" >> /usr/local/bin/$cmdname; \
+                    echo "export PATH=$V2TOP/tae53/bin/$TAE_ARCH_DIR:$V2TOP/tae53/bin/all:\$PATH" >> /usr/local/bin/$cmdname; \
+                    echo "exec $cmd \"\$@\"" >> /usr/local/bin/$cmdname; \
+                    chmod +x /usr/local/bin/$cmdname; \
+                fi; \
+            fi; \
+        done; \
+        echo "✓ Created wrappers for TAE commands"; \
+    fi && \
+    # Create wrappers for TAE 'all' binaries
+    if [ -d "$V2TOP/tae53/bin/all" ]; then \
+        for cmd in $V2TOP/tae53/bin/all/*; do \
+            if [ -f "$cmd" ] && [ -x "$cmd" ]; then \
+                cmdname=$(basename "$cmd"); \
+                if [ ! -f "/usr/local/bin/$cmdname" ]; then \
+                    echo "#!/bin/bash" > /usr/local/bin/$cmdname; \
+                    echo "export V2TOP=$V2TOP" >> /usr/local/bin/$cmdname; \
+                    echo "export WORKSPACE=/usr/local/vicar" >> /usr/local/bin/$cmdname; \
+                    echo "export VICSYS=DEVELOPMENT" >> /usr/local/bin/$cmdname; \
+                    echo "export LD_LIBRARY_PATH=$VICAR_LIB_PATH:\$LD_LIBRARY_PATH" >> /usr/local/bin/$cmdname; \
+                    echo "export PATH=$V2TOP/tae53/bin/$TAE_ARCH_DIR:$V2TOP/tae53/bin/all:\$PATH" >> /usr/local/bin/$cmdname; \
+                    echo "exec $cmd \"\$@\"" >> /usr/local/bin/$cmdname; \
+                    chmod +x /usr/local/bin/$cmdname; \
+                fi; \
+            fi; \
+        done; \
+        echo "✓ Created wrappers for TAE 'all' commands"; \
+    fi && \
+    # Create wrappers for CRUMBS binaries if they exist
+    if [ -d "$V2TOP/crumbs/bin" ]; then \
+        for cmd in $V2TOP/crumbs/bin/*; do \
+            if [ -f "$cmd" ] && [ -x "$cmd" ]; then \
+                cmdname=$(basename "$cmd"); \
+                if [ ! -f "/usr/local/bin/$cmdname" ]; then \
+                    echo "#!/bin/bash" > /usr/local/bin/$cmdname; \
+                    echo "export V2TOP=$V2TOP" >> /usr/local/bin/$cmdname; \
+                    echo "export WORKSPACE=/usr/local/vicar" >> /usr/local/bin/$cmdname; \
+                    echo "export VICSYS=DEVELOPMENT" >> /usr/local/bin/$cmdname; \
+                    echo "export LD_LIBRARY_PATH=$VICAR_LIB_PATH:\$LD_LIBRARY_PATH" >> /usr/local/bin/$cmdname; \
+                    echo "export PATH=$V2TOP/crumbs/bin:\$PATH" >> /usr/local/bin/$cmdname; \
+                    echo "exec $cmd \"\$@\"" >> /usr/local/bin/$cmdname; \
+                    chmod +x /usr/local/bin/$cmdname; \
+                fi; \
+            fi; \
+        done; \
+        echo "✓ Created wrappers for CRUMBS commands"; \
+    fi && \
+    # Create wrappers for MARS binaries if they exist
+    if [ -d "$V2TOP/mars/lib/$ARCH_DIR" ]; then \
+        for cmd in $V2TOP/mars/lib/$ARCH_DIR/*; do \
+            if [ -f "$cmd" ] && [ -x "$cmd" ]; then \
+                cmdname=$(basename "$cmd"); \
+                if [[ ! "$cmdname" =~ \. ]] && [ ! -f "/usr/local/bin/$cmdname" ]; then \
+                    echo "#!/bin/bash" > /usr/local/bin/$cmdname; \
+                    echo "export V2TOP=$V2TOP" >> /usr/local/bin/$cmdname; \
+                    echo "export WORKSPACE=/usr/local/vicar" >> /usr/local/bin/$cmdname; \
+                    echo "export VICSYS=DEVELOPMENT" >> /usr/local/bin/$cmdname; \
+                    echo "export LD_LIBRARY_PATH=$VICAR_LIB_PATH:\$LD_LIBRARY_PATH" >> /usr/local/bin/$cmdname; \
+                    echo "export PATH=$V2TOP/mars/lib/$ARCH_DIR:$V2TOP/p2/lib/$ARCH_DIR:\$PATH" >> /usr/local/bin/$cmdname; \
+                    echo "exec $cmd \"\$@\"" >> /usr/local/bin/$cmdname; \
+                    chmod +x /usr/local/bin/$cmdname; \
+                fi; \
+            fi; \
+        done; \
+        echo "✓ Created wrappers for MARS commands"; \
+    fi && \
+    echo "Wrapper creation complete. Available commands:" && \
+    ls /usr/local/bin/ | grep -v "\.sh$" | wc -l && \
+    echo "commands available"
+
+# Set environment variables for profile scripts
+RUN V2TOP=$(cat /etc/vicar_v2top) && \
+    ARCH_DIR="x86-64-linx" && \
+    # Build comprehensive library path including all external libraries
+    VICAR_LIB_PATH="$V2TOP/olb/$ARCH_DIR:$V2TOP/mars/lib/$ARCH_DIR" && \
+    for extlib in /usr/local/vicar/external/*/v*/$ARCH_DIR/lib /usr/local/vicar/external/*/v*/$ARCH_DIR/lib64 /usr/local/vicar/external/*/v*/$ARCH_DIR; do \
+        if [ -d "$extlib" ]; then \
+            VICAR_LIB_PATH="$VICAR_LIB_PATH:$extlib"; \
+        fi; \
+    done && \
+    echo "export V2TOP=$V2TOP" > /etc/profile.d/vicar.sh && \
+    echo "export WORKSPACE=/usr/local/vicar" >> /etc/profile.d/vicar.sh && \
+    echo "export VICSYS=DEVELOPMENT" >> /etc/profile.d/vicar.sh && \
+    echo "export LD_LIBRARY_PATH=$VICAR_LIB_PATH:\$LD_LIBRARY_PATH" >> /etc/profile.d/vicar.sh && \
+    echo "export PATH=$V2TOP/tae53/bin:$V2TOP/bin:\$PATH" >> /etc/profile.d/vicar.sh && \
+    chmod +x /etc/profile.d/vicar.sh
+
+# Verify VICAR installation
+RUN V2TOP=$(cat /etc/vicar_v2top) && \
+    echo "===== Verifying VICAR Installation =====" && \
+    echo "V2TOP: $V2TOP" && \
+    echo "" && \
+    if [ -d "$V2TOP" ]; then \
+        echo "✓ Found VICAR at $V2TOP"; \
+        echo "Contents:"; \
+        ls -la $V2TOP/ | head -20; \
+        echo ""; \
+        if [ -d "$V2TOP/tae53/bin" ]; then \
+            TAE_COUNT=$(ls -1 $V2TOP/tae53/bin 2>/dev/null | wc -l); \
+            echo "✓ TAE binaries: $TAE_COUNT programs"; \
+            ls $V2TOP/tae53/bin 2>/dev/null | head -5; \
+        fi; \
+        if [ -d "$V2TOP/crumbs/bin" ]; then \
+            CRUMBS_COUNT=$(ls -1 $V2TOP/crumbs/bin 2>/dev/null | wc -l); \
+            echo "✓ CRUMBS binaries: $CRUMBS_COUNT programs"; \
+        fi; \
+    else \
+        echo "✗ VICAR directory not found at $V2TOP"; \
+        exit 1; \
+    fi
+
+# Set up VICAR environment script (tcsh)
+RUN V2TOP=$(cat /etc/vicar_v2top) && \
+    echo '#!/bin/tcsh' > /usr/local/bin/setup-vicar.csh && \
+    echo 'setenv WORKSPACE /usr/local/vicar' >> /usr/local/bin/setup-vicar.csh && \
+    echo 'setenv VICSYS DEVELOPMENT' >> /usr/local/bin/setup-vicar.csh && \
+    echo "setenv V2TOP $V2TOP" >> /usr/local/bin/setup-vicar.csh && \
+    echo 'setenv PATH ${V2TOP}/bin:${V2TOP}/tae53/bin:${PATH}' >> /usr/local/bin/setup-vicar.csh && \
+    chmod +x /usr/local/bin/setup-vicar.csh
+
+# Source VICAR environment in bashrc for interactive shells
+RUN V2TOP=$(cat /etc/vicar_v2top) && \
+    ARCH_DIR="x86-64-linx" && \
+    # Build comprehensive library path including all external libraries
+    VICAR_LIB_PATH="$V2TOP/olb/$ARCH_DIR:$V2TOP/mars/lib/$ARCH_DIR" && \
+    for extlib in /usr/local/vicar/external/*/v*/$ARCH_DIR/lib /usr/local/vicar/external/*/v*/$ARCH_DIR/lib64 /usr/local/vicar/external/*/v*/$ARCH_DIR; do \
+        if [ -d "$extlib" ]; then \
+            VICAR_LIB_PATH="$VICAR_LIB_PATH:$extlib"; \
+        fi; \
+    done && \
+    echo 'export WORKSPACE=/usr/local/vicar' >> /etc/bashrc && \
+    echo 'export VICSYS=DEVELOPMENT' >> /etc/bashrc && \
+    echo "export V2TOP=$V2TOP" >> /etc/bashrc && \
+    echo "export LD_LIBRARY_PATH=$VICAR_LIB_PATH:\$LD_LIBRARY_PATH" >> /etc/bashrc && \
+    echo 'export PATH=${V2TOP}/bin:${V2TOP}/tae53/bin:${PATH}' >> /etc/bashrc
+
+# Aggressive cleanup to minimize final image size
+# Remove package manager caches and temp files
+RUN dnf clean all && \
+    rm -rf /var/cache/dnf/* \
+           /var/cache/yum/* \
+           /var/lib/dnf/history* \
+           /tmp/* \
+           /var/tmp/*
+
+# Set working directory
+WORKDIR ${WORKSPACE}
+
+# Create an entrypoint script that ensures VICAR environment is loaded
+RUN echo '#!/bin/bash' > /usr/local/bin/docker-entrypoint.sh && \
+    echo 'source /etc/profile.d/vicar.sh 2>/dev/null || true' >> /usr/local/bin/docker-entrypoint.sh && \
+    echo 'exec "$@"' >> /usr/local/bin/docker-entrypoint.sh && \
+    chmod +x /usr/local/bin/docker-entrypoint.sh
+
+# Set entrypoint to load VICAR environment
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
+
+# Display final installation summary
+RUN V2TOP=$(cat /etc/vicar_v2top) && \
+    echo "===== VICAR Installation Summary =====" && \
+    echo "V2TOP: $V2TOP" && \
+    echo "Installed RPM packages: $(rpm -qa | grep -i vicar | wc -l)" && \
+    echo "" && \
+    if [ -d "$V2TOP/tae53/bin" ]; then \
+        echo "TAE programs: $(ls -1 $V2TOP/tae53/bin 2>/dev/null | wc -l)"; \
+        echo "Sample TAE programs:"; \
+        ls $V2TOP/tae53/bin 2>/dev/null | head -10; \
+        echo ""; \
+    fi && \
+    if [ -d "$V2TOP/crumbs/bin" ]; then \
+        echo "CRUMBS programs: $(ls -1 $V2TOP/crumbs/bin 2>/dev/null | wc -l)"; \
+    fi && \
+    echo "" && \
+    echo "Common VICAR commands to try:" && \
+    echo "  tae         - TAE command interpreter" && \
+    echo "  label       - Display image labels" && \
+    echo "  list        - List file contents"
+
+# Keep container running (for long-running sidecar pattern)
+# For interactive use: docker run -it vicar-tools:with-rpms bash
+# For sidecar: docker run -d vicar-tools:with-rpms
+CMD ["tail", "-f", "/dev/null"]
