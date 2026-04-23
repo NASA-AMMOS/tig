@@ -1,0 +1,63 @@
+# Git files
+.git
+.gitignore
+.gitattributes
+
+# Documentation
+*.md
+!OPENSOURCE-BUILD.md
+docs/
+
+# IDE files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Workspace data (not needed in build context)
+workspace/*
+!workspace/.gitkeep
+
+# Build artifacts
+*.log
+*.tar.gz
+*.zip
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
+venv/
+env/
+
+# Temporary files
+tmp/
+temp/
+.cache/
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+
+# Other Dockerfiles (only include the one being built)
+docker/Dockerfile.local-binaries
+docker/Dockerfile.with-rpms
+docker/Dockerfile.tig-demo
+docker/rpm-repo.repo
+docker/rpm-repo.repo.example
+
+# direnv
+.envrc
+.envrc.config.example
+.direnv/
+
+# Test data
+test/
+tests/
+*.test

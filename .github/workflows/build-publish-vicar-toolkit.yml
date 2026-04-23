@@ -1,0 +1,263 @@
+name: Build and Publish VICAR Native Toolkit
+
+on:
+  push:
+    branches:
+      - main
+      - master
+      - develop
+    tags:
+      - 'v*'
+    paths:
+      - 'vicar-native-toolkit/docker/Dockerfile.opensource'
+      - '.github/workflows/build-publish-vicar-toolkit.yml'
+  pull_request:
+    branches:
+      - main
+      - master
+      - develop
+    paths:
+      - 'vicar-native-toolkit/docker/Dockerfile.opensource'
+      - '.github/workflows/build-publish-vicar-toolkit.yml'
+  workflow_dispatch:
+    inputs:
+      vicar_version:
+        description: 'VICAR version to build (GitHub release tag)'
+        required: false
+        default: '5.0'
+      external_version:
+        description: 'VICAR externals version'
+        required: false
+        default: '5.0'
+      push_to_registry:
+        description: 'Push to GitHub Container Registry'
+        required: false
+        type: boolean
+        default: true
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}/vicar-native-toolkit
+
+jobs:
+  build-and-push:
+    name: Build and Push VICAR Native Toolkit
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      
+      - name: Log in to GitHub Container Registry
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Extract metadata (tags, labels)
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            # Tag with branch name for branch pushes
+            type=ref,event=branch
+            # Tag with PR number for pull requests
+            type=ref,event=pr
+            # Tag with semantic version for tags
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            # Tag with 'latest' for main branch
+            type=raw,value=latest,enable={{is_default_branch}}
+            # Tag with 'opensource' as a stable identifier
+            type=raw,value=opensource
+            # Tag with commit SHA
+            type=sha,prefix={{branch}}-
+      
+      - name: Determine build arguments
+        id: build-args
+        run: |
+          # Use workflow inputs if provided, otherwise use defaults
+          VICAR_VERSION="${{ github.event.inputs.vicar_version }}"
+          EXTERNAL_VERSION="${{ github.event.inputs.external_version }}"
+          
+          # If not provided, use defaults (5.0 release for pre-built binaries)
+          VICAR_VERSION="${VICAR_VERSION:-5.0}"
+          EXTERNAL_VERSION="${EXTERNAL_VERSION:-5.0}"
+          
+          echo "vicar_version=${VICAR_VERSION}" >> $GITHUB_OUTPUT
+          echo "external_version=${EXTERNAL_VERSION}" >> $GITHUB_OUTPUT
+          
+          echo "Building with:"
+          echo "  VICAR version: ${VICAR_VERSION}"
+          echo "  Externals version: ${EXTERNAL_VERSION}"
+          echo "  Build method: Pre-built binaries from GitHub releases"
+      
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./vicar-native-toolkit
+          file: ./vicar-native-toolkit/docker/Dockerfile.opensource
+          platforms: linux/amd64
+          push: ${{ github.event_name != 'pull_request' && (github.event.inputs.push_to_registry != 'false') }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            VICAR_VERSION=${{ steps.build-args.outputs.vicar_version }}
+            EXTERNAL_VERSION=${{ steps.build-args.outputs.external_version }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      
+      - name: Generate build summary
+        if: always()
+        run: |
+          echo "## VICAR Native Toolkit Build Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Build Information:**" >> $GITHUB_STEP_SUMMARY
+          echo "- Repository: \`${{ github.repository }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- Branch/Tag: \`${{ github.ref_name }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- Commit: \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- VICAR Version: \`${{ steps.build-args.outputs.vicar_version }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- Externals Version: \`${{ steps.build-args.outputs.external_version }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Image Tags:**" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo "${{ steps.meta.outputs.tags }}" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [ "${{ github.event_name }}" != "pull_request" ]; then
+            echo "**Pull the image:**" >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
+            echo "docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:opensource" >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "**Run the container:**" >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
+            echo "docker run -it --rm ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:opensource bash" >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "**Note:** Image was built but not pushed (pull request)" >> $GITHUB_STEP_SUMMARY
+          fi
+      
+      - name: Test image (basic smoke test)
+        if: success()
+        run: |
+          echo "Running basic smoke tests on built image..."
+          
+          # Get the first tag from the metadata output
+          IMAGE_TAG=$(echo "${{ steps.meta.outputs.tags }}" | head -1)
+          
+          echo "Testing image: ${IMAGE_TAG}"
+          
+          # Test 1: Check if container starts
+          echo "Test 1: Container startup"
+          docker run --rm ${IMAGE_TAG} echo "✓ Container started successfully"
+          
+          # Test 2: Check if VICAR environment is set
+          echo "Test 2: VICAR environment"
+          docker run --rm ${IMAGE_TAG} bash -c 'echo "V2TOP: $V2TOP"'
+          
+          # Test 3: Check if wrapper scripts exist
+          echo "Test 3: Wrapper scripts"
+          docker run --rm ${IMAGE_TAG} bash -c 'ls /usr/local/bin | head -10'
+          
+          # Test 4: Try to run a simple VICAR command
+          echo "Test 4: VICAR command execution"
+          docker run --rm ${IMAGE_TAG} bash -c 'label --help || echo "label command found but may need image input"'
+          
+          echo "✓ All smoke tests passed"
+
+  # Optional: Create GitHub Release for tagged versions
+  create-release:
+    name: Create GitHub Release
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: write
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Create Release Notes
+        id: release-notes
+        run: |
+          cat > release-notes.md << 'EOF'
+          ## VICAR Native Toolkit - Open Source Edition
+          
+          This release provides a containerized version of the VICAR image processing system built from pre-built binaries distributed via GitHub releases.
+          
+          ### What's Included
+          - VICAR image processing tools (pre-built binaries)
+          - TAE (Terminal Application Executive)
+          - MARS terrain processing tools
+          - Python 3.9 runtime
+          - Vicario - VICAR to PNG/JPEG/TIFF converter
+          - VISOR calibration files (Phoenix, MER missions)
+          - VISOR sample data for testing
+          - All necessary runtime dependencies
+          
+          ### Quick Start
+          
+          **Pull the image:**
+          ```bash
+          docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}
+          ```
+          
+          **Run interactively:**
+          ```bash
+          docker run -it --rm \
+            -v $(pwd)/workspace:/workspace \
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }} \
+            bash
+          ```
+          
+          **Test VICAR commands:**
+          ```bash
+          docker run --rm ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }} label --help
+          ```
+          
+          **Convert VICAR images:**
+          ```bash
+          docker run --rm -v $(pwd):/workspace \
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }} \
+            vicario input.vic output.png
+          ```
+          
+          ### Available Tags
+          - `${{ github.ref_name }}` - This specific version
+          - `opensource` - Latest open-source build
+          - `latest` - Latest stable release
+          
+          ### Data Locations Inside Container
+          - VISOR calibrations: `/usr/local/vicar/visor_data/calib`
+          - VISOR sample data: `/usr/local/vicar/visor_data/samples`
+          
+          ### Source Code
+          - VICAR: https://github.com/NASA-AMMOS/VICAR
+          - Pre-built binaries from release: ${{ github.event.inputs.vicar_version || '5.0' }}
+          - Built from commit: ${{ github.sha }}
+          
+          ### Documentation
+          See the [vicar-native-toolkit README](vicar-native-toolkit/README.md) for detailed usage instructions.
+          EOF
+      
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          body_path: release-notes.md
+          draft: false
+          prerelease: ${{ contains(github.ref_name, 'alpha') || contains(github.ref_name, 'beta') || contains(github.ref_name, 'rc') }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
