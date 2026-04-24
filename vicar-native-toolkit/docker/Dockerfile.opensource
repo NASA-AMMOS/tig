@@ -2,7 +2,10 @@
 # Uses pre-built VICAR binaries from GitHub releases
 # Based on Oracle Linux 8 (RHEL-compatible)
 
-FROM --platform=linux/amd64 oraclelinux:8
+# Use build argument for platform to avoid hardcoding
+ARG TARGETPLATFORM=linux/amd64
+
+FROM --platform=$TARGETPLATFORM oraclelinux:8
 
 LABEL org.opencontainers.image.title="VICAR Open Source Tools"
 LABEL org.opencontainers.image.description="Open source distribution of VICAR image processing tools"
