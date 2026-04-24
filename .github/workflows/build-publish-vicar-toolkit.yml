@@ -138,7 +138,7 @@ jobs:
             EXTERNAL_VERSION=${{ steps.build-args.outputs.external_version }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          outputs: type=registry
+          outputs: ${{ github.event_name == 'pull_request' && 'type=cacheonly' || '' }}
       
       - name: Generate build summary
         if: always()
@@ -194,6 +194,9 @@ jobs:
         if: success() && github.event_name != 'pull_request'
         run: |
           echo "Running comprehensive tests on built image..."
+          
+          # Clean up build cache before pulling image for tests
+          docker builder prune -af
           
           # Get the first tag from the metadata output
           IMAGE_TAG=$(echo "${{ steps.meta.outputs.tags }}" | head -1)
