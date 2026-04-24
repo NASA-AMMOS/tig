@@ -110,7 +110,6 @@ jobs:
           file: ./vicar-native-toolkit/docker/Dockerfile.opensource
           platforms: linux/amd64
           push: ${{ github.event_name != 'pull_request' && (github.event.inputs.push_to_registry != 'false') }}
-          load: ${{ github.event_name == 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
@@ -148,11 +147,14 @@ jobs:
             echo "docker run -it --rm ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:opensource bash" >> $GITHUB_STEP_SUMMARY
             echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
           else
-            echo "**Note:** Image was built but not pushed (pull request)" >> $GITHUB_STEP_SUMMARY
+            echo "**Note:** Image was built successfully but not pushed (pull request)." >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Smoke tests are skipped for PRs due to image size (~3-4GB)." >> $GITHUB_STEP_SUMMARY
+            echo "The image will be pushed and tested when merged to a branch." >> $GITHUB_STEP_SUMMARY
           fi
       
       - name: Test image (basic smoke test)
-        if: success()
+        if: success() && github.event_name != 'pull_request'
         run: |
           echo "Running basic smoke tests on built image..."
           
