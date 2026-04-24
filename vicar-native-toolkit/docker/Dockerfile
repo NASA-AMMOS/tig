@@ -89,20 +89,29 @@ RUN echo "Downloading and extracting VICAR binaries..." && \
     EXTRACTED_DIR=$(ls -d vicar_open_bin_* 2>/dev/null | head -1) && \
     if [ -n "$EXTRACTED_DIR" ] && [ -d "$EXTRACTED_DIR" ]; then \
         echo "Found extracted directory: $EXTRACTED_DIR"; \
-        # Check if there's a nested vicar_open_* directory inside
-        NESTED_DIR=$(find "$EXTRACTED_DIR" -maxdepth 1 -type d -name "vicar_open_*" | head -1); \
-        if [ -n "$NESTED_DIR" ] && [ -d "$NESTED_DIR" ]; then \
-            echo "Moving nested directory $NESTED_DIR to ${WORKSPACE}/dev/"; \
-            cp -r "$NESTED_DIR"/* ${WORKSPACE}/dev/ && \
-            echo "✓ VICAR binaries installed from nested structure"; \
+        # Check if there's a nested vicar_open_5.0 directory inside the bin directory
+        if [ -d "$EXTRACTED_DIR/vicar_open_5.0" ]; then \
+            echo "Found nested VICAR directory: $EXTRACTED_DIR/vicar_open_5.0"; \
+            echo "Flattening structure - moving contents directly to ${WORKSPACE}/dev/"; \
+            cp -r "$EXTRACTED_DIR/vicar_open_5.0"/* ${WORKSPACE}/dev/ && \
+            echo "✓ VICAR binaries installed (flattened from nested structure)"; \
         else \
-            echo "Moving $EXTRACTED_DIR to ${WORKSPACE}/dev/"; \
+            echo "Moving $EXTRACTED_DIR contents to ${WORKSPACE}/dev/"; \
             cp -r "$EXTRACTED_DIR"/* ${WORKSPACE}/dev/ && \
             echo "✓ VICAR binaries installed"; \
         fi && \
         rm -rf "$EXTRACTED_DIR"; \
     else \
         echo "ERROR: Could not find extracted binaries directory" && exit 1; \
+    fi && \
+    echo "Verifying flattened structure..." && \
+    ls -la ${WORKSPACE}/dev/ && \
+    if [ -d "${WORKSPACE}/dev/p2" ] && [ -d "${WORKSPACE}/dev/tae53" ]; then \
+        echo "✓ Structure verification passed - p2 and tae53 directories found directly under dev/"; \
+    else \
+        echo "ERROR: Expected directories not found. Directory structure:"; \
+        find ${WORKSPACE}/dev -maxdepth 2 -type d; \
+        exit 1; \
     fi
 
 # Download and extract VICAR external libraries
@@ -111,12 +120,28 @@ RUN echo "Downloading and extracting VICAR external libraries..." && \
     EXTRACTED_DIR=$(ls -d vicar_open_ext_* 2>/dev/null | head -1) && \
     if [ -n "$EXTRACTED_DIR" ] && [ -d "$EXTRACTED_DIR" ]; then \
         echo "Found extracted directory: $EXTRACTED_DIR"; \
-        # The externals directory is already correctly structured
-        echo "Moving $EXTRACTED_DIR to ${WORKSPACE}/external/"; \
-        mkdir -p ${WORKSPACE}/external && \
-        cp -r "$EXTRACTED_DIR"/* ${WORKSPACE}/external/ && \
-        rm -rf "$EXTRACTED_DIR" && \
-        echo "✓ External libraries installed"; \
+        # Check if there's content to flatten
+        CONTENT_COUNT=$(find "$EXTRACTED_DIR" -maxdepth 1 -mindepth 1 | wc -l); \
+        if [ "$CONTENT_COUNT" -eq 1 ]; then \
+            # Single subdirectory - flatten it
+            SUBDIR=$(find "$EXTRACTED_DIR" -maxdepth 1 -mindepth 1 -type d | head -1); \
+            if [ -n "$SUBDIR" ]; then \
+                echo "Flattening external libraries from nested structure"; \
+                mkdir -p ${WORKSPACE}/external && \
+                cp -r "$SUBDIR"/* ${WORKSPACE}/external/ && \
+                echo "✓ External libraries installed (flattened)"; \
+            else \
+                mkdir -p ${WORKSPACE}/external && \
+                cp -r "$EXTRACTED_DIR"/* ${WORKSPACE}/external/ && \
+                echo "✓ External libraries installed"; \
+            fi; \
+        else \
+            echo "Moving $EXTRACTED_DIR contents to ${WORKSPACE}/external/"; \
+            mkdir -p ${WORKSPACE}/external && \
+            cp -r "$EXTRACTED_DIR"/* ${WORKSPACE}/external/ && \
+            echo "✓ External libraries installed"; \
+        fi && \
+        rm -rf "$EXTRACTED_DIR"; \
     else \
         echo "ERROR: Could not find extracted externals directory" && exit 1; \
     fi

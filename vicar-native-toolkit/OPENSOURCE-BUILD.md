@@ -104,7 +104,7 @@ Example with custom arguments:
 
 ```bash
 docker build \
-  -f docker/Dockerfile.opensource \
+  -f docker/Dockerfile \
   -t vicar-native-toolkit:v3.0 \
   --build-arg VICAR_VERSION=v3.0 \
   --build-arg EXTERNAL_VERSION=5.0 \
@@ -317,4 +317,4 @@ For issues related to:
 
 ---
 
-**Note**: This is the open-source build suitable for public distribution. For JPL-internal builds with mission-specific tools, see `Dockerfile.with-rpms` or `Dockerfile.local-binaries`.
+**Note**: This is the open-source build suitable for public distribution and is now the primary/official build method for VICAR Native Toolkit.

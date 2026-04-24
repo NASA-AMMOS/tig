@@ -30,8 +30,8 @@ PROJECT_DIR="${SCRIPT_DIR}/.."
 DOCKER_DIR="${PROJECT_DIR}/docker"
 
 # Check if Dockerfile exists
-if [ ! -f "${DOCKER_DIR}/Dockerfile.opensource" ]; then
-    echo -e "${RED}ERROR: Dockerfile.opensource not found in ${DOCKER_DIR}${NC}"
+if [ ! -f "${DOCKER_DIR}/Dockerfile" ]; then
+    echo -e "${RED}ERROR: Dockerfile not found in ${DOCKER_DIR}${NC}"
     exit 1
 fi
 
@@ -49,7 +49,7 @@ echo ""
 
 docker build \
     --platform linux/amd64 \
-    -f "${DOCKER_DIR}/Dockerfile.opensource" \
+    -f "${DOCKER_DIR}/Dockerfile" \
     -t "${IMAGE_NAME}:${IMAGE_TAG}" \
     --build-arg VICAR_VERSION="${VICAR_VERSION}" \
     --build-arg EXTERNAL_VERSION="${EXTERNAL_VERSION}" \
