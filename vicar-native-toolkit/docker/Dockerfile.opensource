@@ -88,10 +88,19 @@ RUN echo "Downloading and extracting VICAR binaries..." && \
     curl -L "https://github.com/NASA-AMMOS/VICAR/releases/download/${VICAR_VERSION}/${BINARIES_FILE}" | tar -zxf - && \
     EXTRACTED_DIR=$(ls -d vicar_open_bin_* 2>/dev/null | head -1) && \
     if [ -n "$EXTRACTED_DIR" ] && [ -d "$EXTRACTED_DIR" ]; then \
-        echo "Moving $EXTRACTED_DIR to ${WORKSPACE}/dev/"; \
-        cp -r "$EXTRACTED_DIR"/* ${WORKSPACE}/dev/ && \
-        rm -rf "$EXTRACTED_DIR" && \
-        echo "✓ VICAR binaries installed"; \
+        echo "Found extracted directory: $EXTRACTED_DIR"; \
+        # Check if there's a nested vicar_open_* directory inside
+        NESTED_DIR=$(find "$EXTRACTED_DIR" -maxdepth 1 -type d -name "vicar_open_*" | head -1); \
+        if [ -n "$NESTED_DIR" ] && [ -d "$NESTED_DIR" ]; then \
+            echo "Moving nested directory $NESTED_DIR to ${WORKSPACE}/dev/"; \
+            cp -r "$NESTED_DIR"/* ${WORKSPACE}/dev/ && \
+            echo "✓ VICAR binaries installed from nested structure"; \
+        else \
+            echo "Moving $EXTRACTED_DIR to ${WORKSPACE}/dev/"; \
+            cp -r "$EXTRACTED_DIR"/* ${WORKSPACE}/dev/ && \
+            echo "✓ VICAR binaries installed"; \
+        fi && \
+        rm -rf "$EXTRACTED_DIR"; \
     else \
         echo "ERROR: Could not find extracted binaries directory" && exit 1; \
     fi
@@ -101,6 +110,8 @@ RUN echo "Downloading and extracting VICAR external libraries..." && \
     curl -L "https://github.com/NASA-AMMOS/VICAR/releases/download/${VICAR_VERSION}/${EXTERNAL_FILE}" | tar -zxf - && \
     EXTRACTED_DIR=$(ls -d vicar_open_ext_* 2>/dev/null | head -1) && \
     if [ -n "$EXTRACTED_DIR" ] && [ -d "$EXTRACTED_DIR" ]; then \
+        echo "Found extracted directory: $EXTRACTED_DIR"; \
+        # The externals directory is already correctly structured
         echo "Moving $EXTRACTED_DIR to ${WORKSPACE}/external/"; \
         mkdir -p ${WORKSPACE}/external && \
         cp -r "$EXTRACTED_DIR"/* ${WORKSPACE}/external/ && \
@@ -137,6 +148,9 @@ WORKDIR /workspace
 RUN ARCH_DIR="x86-64-linx" && \
     TAE_ARCH_DIR="x86_64_linx" && \
     echo "Creating wrapper scripts for VICAR commands..." && \
+    echo "V2TOP=${V2TOP}" && \
+    echo "Checking for directories:" && \
+    ls -la ${V2TOP}/ && \
     # Build comprehensive library path
     VICAR_LIB_PATH="${V2TOP}/olb/$ARCH_DIR:${V2TOP}/mars/lib/$ARCH_DIR" && \
     for extlib in ${WORKSPACE}/external/*/v*/$ARCH_DIR/lib ${WORKSPACE}/external/*/v*/$ARCH_DIR/lib64 ${WORKSPACE}/external/*/v*/$ARCH_DIR; do \
@@ -147,6 +161,8 @@ RUN ARCH_DIR="x86-64-linx" && \
     echo "Built library path with $(echo $VICAR_LIB_PATH | tr ':' '\n' | wc -l) directories" && \
     # Create wrappers for VICAR p2 programs
     if [ -d "${V2TOP}/p2/lib/$ARCH_DIR" ]; then \
+        echo "Found p2 directory: ${V2TOP}/p2/lib/$ARCH_DIR"; \
+        WRAPPER_COUNT=0; \
         for cmd in ${V2TOP}/p2/lib/$ARCH_DIR/*; do \
             if [ -f "$cmd" ] && [ -x "$cmd" ]; then \
                 cmdname=$(basename "$cmd"); \
@@ -159,13 +175,17 @@ RUN ARCH_DIR="x86-64-linx" && \
                     echo "export PATH=${V2TOP}/p2/lib/$ARCH_DIR:${V2TOP}/tae53/bin/$TAE_ARCH_DIR:\$PATH" >> /usr/local/bin/$cmdname; \
                     echo "exec $cmd \"\$@\"" >> /usr/local/bin/$cmdname; \
                     chmod +x /usr/local/bin/$cmdname; \
+                    WRAPPER_COUNT=$((WRAPPER_COUNT + 1)); \
                 fi; \
             fi; \
         done; \
-        echo "✓ Created wrappers for VICAR p2 commands"; \
+        echo "✓ Created $WRAPPER_COUNT wrappers for VICAR p2 commands"; \
+    else \
+        echo "⚠ p2 directory not found at ${V2TOP}/p2/lib/$ARCH_DIR"; \
     fi && \
     # Create wrappers for TAE binaries
     if [ -d "${V2TOP}/tae53/bin/$TAE_ARCH_DIR" ]; then \
+        TAE_COUNT=0; \
         for cmd in ${V2TOP}/tae53/bin/$TAE_ARCH_DIR/*; do \
             if [ -f "$cmd" ] && [ -x "$cmd" ]; then \
                 cmdname=$(basename "$cmd"); \
@@ -178,13 +198,17 @@ RUN ARCH_DIR="x86-64-linx" && \
                     echo "export PATH=${V2TOP}/tae53/bin/$TAE_ARCH_DIR:${V2TOP}/tae53/bin/all:\$PATH" >> /usr/local/bin/$cmdname; \
                     echo "exec $cmd \"\$@\"" >> /usr/local/bin/$cmdname; \
                     chmod +x /usr/local/bin/$cmdname; \
+                    TAE_COUNT=$((TAE_COUNT + 1)); \
                 fi; \
             fi; \
         done; \
-        echo "✓ Created wrappers for TAE commands"; \
+        echo "✓ Created $TAE_COUNT wrappers for TAE commands"; \
+    else \
+        echo "⚠ TAE directory not found at ${V2TOP}/tae53/bin/$TAE_ARCH_DIR"; \
     fi && \
     # Create wrappers for MARS binaries
     if [ -d "${V2TOP}/mars/lib/$ARCH_DIR" ]; then \
+        MARS_COUNT=0; \
         for cmd in ${V2TOP}/mars/lib/$ARCH_DIR/*; do \
             if [ -f "$cmd" ] && [ -x "$cmd" ]; then \
                 cmdname=$(basename "$cmd"); \
@@ -197,10 +221,13 @@ RUN ARCH_DIR="x86-64-linx" && \
                     echo "export PATH=${V2TOP}/mars/lib/$ARCH_DIR:${V2TOP}/p2/lib/$ARCH_DIR:\$PATH" >> /usr/local/bin/$cmdname; \
                     echo "exec $cmd \"\$@\"" >> /usr/local/bin/$cmdname; \
                     chmod +x /usr/local/bin/$cmdname; \
+                    MARS_COUNT=$((MARS_COUNT + 1)); \
                 fi; \
             fi; \
         done; \
-        echo "✓ Created wrappers for MARS commands"; \
+        echo "✓ Created $MARS_COUNT wrappers for MARS commands"; \
+    else \
+        echo "⚠ MARS directory not found at ${V2TOP}/mars/lib/$ARCH_DIR"; \
     fi && \
     echo "Wrapper creation complete"
 
