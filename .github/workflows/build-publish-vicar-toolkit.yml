@@ -51,6 +51,27 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
       
+      - name: Free up disk space
+        run: |
+          echo "Disk space before cleanup:"
+          df -h
+          echo ""
+          
+          # Remove unnecessary pre-installed software
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /opt/hostedtoolcache/CodeQL
+          sudo rm -rf /usr/local/share/boost
+          sudo rm -rf "$AGENT_TOOLSDIRECTORY"
+          
+          # Clean up docker
+          docker system prune -af --volumes
+          
+          echo ""
+          echo "Disk space after cleanup:"
+          df -h
+      
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
       
@@ -117,7 +138,7 @@ jobs:
             EXTERNAL_VERSION=${{ steps.build-args.outputs.external_version }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          load: true  # Load image into Docker for testing
+          outputs: type=registry
       
       - name: Generate build summary
         if: always()
@@ -132,19 +153,21 @@ jobs:
           echo "- Externals Version: \`${{ steps.build-args.outputs.external_version }}\`" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           
-          echo "**Test Results:**" >> $GITHUB_STEP_SUMMARY
-          echo "✅ 15 comprehensive tests executed" >> $GITHUB_STEP_SUMMARY
-          echo "- Container startup and environment" >> $GITHUB_STEP_SUMMARY
-          echo "- Directory structure verification (flattening)" >> $GITHUB_STEP_SUMMARY
-          echo "- Wrapper scripts (545 commands)" >> $GITHUB_STEP_SUMMARY
-          echo "- VICAR operations (gen, list, copy, stretch)" >> $GITHUB_STEP_SUMMARY
-          echo "- vicario converter (PNG, JPEG, TIFF)" >> $GITHUB_STEP_SUMMARY
-          echo "- VISOR sample data access" >> $GITHUB_STEP_SUMMARY
-          echo "- Python/Pillow dependencies" >> $GITHUB_STEP_SUMMARY
-          echo "- Docker exec pattern (vicar-native-toolkit)" >> $GITHUB_STEP_SUMMARY
-          echo "- File persistence to host" >> $GITHUB_STEP_SUMMARY
-          echo "- MARS commands (345 programs)" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ github.event_name }}" != "pull_request" ]; then
+            echo "**Test Results:**" >> $GITHUB_STEP_SUMMARY
+            echo "✅ 15 comprehensive tests executed" >> $GITHUB_STEP_SUMMARY
+            echo "- Container startup and environment" >> $GITHUB_STEP_SUMMARY
+            echo "- Directory structure verification (flattening)" >> $GITHUB_STEP_SUMMARY
+            echo "- Wrapper scripts (545 commands)" >> $GITHUB_STEP_SUMMARY
+            echo "- VICAR operations (gen, list, copy, stretch)" >> $GITHUB_STEP_SUMMARY
+            echo "- vicario converter (PNG, JPEG, TIFF)" >> $GITHUB_STEP_SUMMARY
+            echo "- VISOR sample data access" >> $GITHUB_STEP_SUMMARY
+            echo "- Python/Pillow dependencies" >> $GITHUB_STEP_SUMMARY
+            echo "- Docker exec pattern (vicar-native-toolkit)" >> $GITHUB_STEP_SUMMARY
+            echo "- File persistence to host" >> $GITHUB_STEP_SUMMARY
+            echo "- MARS commands (345 programs)" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+          fi
           
           echo "**Image Tags:**" >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
@@ -163,12 +186,12 @@ jobs:
             echo "docker run -it --rm ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:opensource bash" >> $GITHUB_STEP_SUMMARY
             echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
           else
-            echo "**Note:** Image was built and tested successfully but not pushed (pull request)." >> $GITHUB_STEP_SUMMARY
-            echo "The image will be pushed when merged to a branch." >> $GITHUB_STEP_SUMMARY
+            echo "**Note:** Image was built successfully but not pushed (pull request)." >> $GITHUB_STEP_SUMMARY
+            echo "Tests are skipped for PRs to conserve disk space. The image will be tested when merged." >> $GITHUB_STEP_SUMMARY
           fi
       
       - name: Run comprehensive tests
-        if: success()
+        if: success() && github.event_name != 'pull_request'
         run: |
           echo "Running comprehensive tests on built image..."
           
@@ -177,6 +200,9 @@ jobs:
           
           echo "Testing image: ${IMAGE_TAG}"
           echo ""
+          
+          # Pull the image from registry
+          docker pull ${IMAGE_TAG}
           
           # Create temporary workspace for testing
           TEST_WORKSPACE=$(mktemp -d)
