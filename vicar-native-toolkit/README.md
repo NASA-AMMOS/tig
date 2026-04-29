@@ -4,6 +4,16 @@ Make ~200 VICAR CLI programs living inside a Docker container feel like native c
 
 **Works on both Linux (bash) and macOS (zsh), including Apple Silicon (M1/M2).**
 
+## Distribution Options
+
+This toolkit provides multiple ways to run VICAR:
+
+- **Open Source Build** (Recommended for public use) - Builds VICAR from the public GitHub repository. See [OPENSOURCE-BUILD.md](OPENSOURCE-BUILD.md) for details.
+- **Pre-built RPMs** (JPL Internal) - Uses pre-built RPM packages from JPL Artifactory
+- **Local Binaries** - Uses locally compiled VICAR binaries
+
+For most users, the **open-source build** is recommended. It requires no special access and builds directly from the [NASA-AMMOS/VICAR](https://github.com/NASA-AMMOS/VICAR) repository.
+
 ## Architecture
 
 This project implements the docker-native-wrapper pattern using:
