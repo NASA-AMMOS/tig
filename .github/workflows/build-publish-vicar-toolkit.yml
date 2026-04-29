@@ -288,7 +288,7 @@ jobs:
           echo "============================================"
           echo "Test 5: Generate test image (gen command)"
           echo "============================================"
-          docker run --rm -v ${TEST_WORKSPACE}:/workspace ${IMAGE_TAG} bash -c '
+          docker run --rm -v ${TEST_WORKSPACE}:/workspace:Z ${IMAGE_TAG} bash -c '
             gen /workspace/test.vic 256 256
             if [ -f /workspace/test.vic ]; then
               SIZE=$(stat -f%z /workspace/test.vic 2>/dev/null || stat -c%s /workspace/test.vic 2>/dev/null)
@@ -304,7 +304,7 @@ jobs:
           echo "============================================"
           echo "Test 6: List image contents (list command)"
           echo "============================================"
-          docker run --rm -v ${TEST_WORKSPACE}:/workspace ${IMAGE_TAG} bash -c '
+          docker run --rm -v ${TEST_WORKSPACE}:/workspace:Z ${IMAGE_TAG} bash -c '
             list /workspace/test.vic | head -15
             if [ $? -eq 0 ]; then
               echo "✓ List command successful"
@@ -319,7 +319,7 @@ jobs:
           echo "============================================"
           echo "Test 7: Copy image (copy command)"
           echo "============================================"
-          docker run --rm -v ${TEST_WORKSPACE}:/workspace ${IMAGE_TAG} bash -c '
+          docker run --rm -v ${TEST_WORKSPACE}:/workspace:Z ${IMAGE_TAG} bash -c '
             copy /workspace/test.vic /workspace/test_copy.vic
             if [ -f /workspace/test_copy.vic ]; then
               echo "✓ Copy command successful"
@@ -334,7 +334,7 @@ jobs:
           echo "============================================"
           echo "Test 8: Stretch image (stretch command)"
           echo "============================================"
-          docker run --rm -v ${TEST_WORKSPACE}:/workspace ${IMAGE_TAG} bash -c '
+          docker run --rm -v ${TEST_WORKSPACE}:/workspace:Z ${IMAGE_TAG} bash -c '
             stretch /workspace/test.vic /workspace/stretched.vic
             if [ -f /workspace/stretched.vic ]; then
               echo "✓ Stretch command successful"
@@ -349,7 +349,7 @@ jobs:
           echo "============================================"
           echo "Test 9: vicario converter (VICAR to PNG)"
           echo "============================================"
-          docker run --rm -v ${TEST_WORKSPACE}:/workspace ${IMAGE_TAG} bash -c '
+          docker run --rm -v ${TEST_WORKSPACE}:/workspace:Z ${IMAGE_TAG} bash -c '
             vicario /workspace/test.vic /workspace/test.png
             if [ -f /workspace/test.png ]; then
               echo "✓ PNG conversion successful"
@@ -364,7 +364,7 @@ jobs:
           echo "============================================"
           echo "Test 10: vicario converter (VICAR to JPEG)"
           echo "============================================"
-          docker run --rm -v ${TEST_WORKSPACE}:/workspace ${IMAGE_TAG} bash -c '
+          docker run --rm -v ${TEST_WORKSPACE}:/workspace:Z ${IMAGE_TAG} bash -c '
             vicario /workspace/test.vic /workspace/test.jpg
             if [ -f /workspace/test.jpg ]; then
               echo "✓ JPEG conversion successful"
@@ -418,7 +418,7 @@ jobs:
           echo "============================================"
           echo "Test 13: Docker exec pattern (long-running container)"
           echo "============================================"
-          docker run -d --name vicar-test-container -v ${TEST_WORKSPACE}:/workspace ${IMAGE_TAG} tail -f /dev/null
+          docker run -d --name vicar-test-container -v ${TEST_WORKSPACE}:/workspace:Z ${IMAGE_TAG} tail -f /dev/null
           sleep 2
           
           docker exec vicar-test-container gen /workspace/exec_test.vic 128 128
