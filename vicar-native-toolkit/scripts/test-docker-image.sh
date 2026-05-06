@@ -214,18 +214,31 @@ print_test_header "Test 13: Docker exec pattern (long-running container)"
 docker run -d --name vicar-test-container -v ${TEST_WORKSPACE}:/workspace ${IMAGE_TAG} tail -f /dev/null > /dev/null 2>&1
 sleep 2
 
-docker exec vicar-test-container gen /workspace/exec_test.vic 128 128 > /dev/null 2>&1
-docker exec vicar-test-container list /workspace/exec_test.vic > /dev/null 2>&1
-docker exec vicar-test-container vicario /workspace/exec_test.vic /workspace/exec_test.png > /dev/null 2>&1
-
-if docker exec vicar-test-container test -f /workspace/exec_test.png; then
+if ! docker exec vicar-test-container gen /workspace/exec_test.vic 128 128 > /dev/null 2>&1; then
+    echo -e "${RED}gen command failed${NC}"
+    docker stop vicar-test-container > /dev/null 2>&1
+    docker rm vicar-test-container > /dev/null 2>&1
+    test_result 1 "Docker exec pattern failed (gen)"
+elif ! docker exec vicar-test-container list /workspace/exec_test.vic > /dev/null 2>&1; then
+    echo -e "${RED}list command failed${NC}"
+    docker stop vicar-test-container > /dev/null 2>&1
+    docker rm vicar-test-container > /dev/null 2>&1
+    test_result 1 "Docker exec pattern failed (list)"
+elif ! docker exec vicar-test-container vicario /workspace/exec_test.vic /workspace/exec_test.png > /dev/null 2>&1; then
+    echo -e "${RED}vicario command failed${NC}"
+    docker stop vicar-test-container > /dev/null 2>&1
+    docker rm vicar-test-container > /dev/null 2>&1
+    test_result 1 "Docker exec pattern failed (vicario)"
+elif docker exec vicar-test-container test -f /workspace/exec_test.png; then
     test_result 0 "Docker exec pattern works correctly"
+    docker stop vicar-test-container > /dev/null 2>&1
+    docker rm vicar-test-container > /dev/null 2>&1
 else
-    test_result 1 "Docker exec pattern failed"
+    echo -e "${RED}output file not created${NC}"
+    docker stop vicar-test-container > /dev/null 2>&1
+    docker rm vicar-test-container > /dev/null 2>&1
+    test_result 1 "Docker exec pattern failed (file not created)"
 fi
-
-docker stop vicar-test-container > /dev/null 2>&1
-docker rm vicar-test-container > /dev/null 2>&1
 
 # Test 14: File persistence verification
 print_test_header "Test 14: File persistence to host"
