@@ -170,6 +170,7 @@ ENV VISOR_SAMPLES=${WORKSPACE}/visor_data/samples
 WORKDIR /workspace
 
 # Create symbolic links for common VICAR commands in /usr/local/bin
+# Updated 2026-05-06: Fixed exit code handling (VICAR returns 1 on success)
 RUN ARCH_DIR="x86-64-linx" && \
     TAE_ARCH_DIR="x86_64_linx" && \
     echo "Creating wrapper scripts for VICAR commands..." && \
