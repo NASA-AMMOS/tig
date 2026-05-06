@@ -421,14 +421,31 @@ jobs:
           docker run -d --name vicar-test-container -v ${TEST_WORKSPACE}:/workspace:Z ${IMAGE_TAG} tail -f /dev/null
           sleep 2
           
-          docker exec vicar-test-container gen /workspace/exec_test.vic 128 128
-          docker exec vicar-test-container list /workspace/exec_test.vic | head -10
-          docker exec vicar-test-container vicario /workspace/exec_test.vic /workspace/exec_test.png
+          if ! docker exec vicar-test-container gen /workspace/exec_test.vic 128 128; then
+            echo "✗ ERROR: gen command failed in exec pattern"
+            docker stop vicar-test-container
+            docker rm vicar-test-container
+            exit 1
+          fi
+          
+          if ! docker exec vicar-test-container list /workspace/exec_test.vic | head -10; then
+            echo "✗ ERROR: list command failed in exec pattern"
+            docker stop vicar-test-container
+            docker rm vicar-test-container
+            exit 1
+          fi
+          
+          if ! docker exec vicar-test-container vicario /workspace/exec_test.vic /workspace/exec_test.png; then
+            echo "✗ ERROR: vicario command failed in exec pattern"
+            docker stop vicar-test-container
+            docker rm vicar-test-container
+            exit 1
+          fi
           
           if docker exec vicar-test-container test -f /workspace/exec_test.png; then
             echo "✓ Docker exec pattern works correctly"
           else
-            echo "✗ ERROR: Docker exec pattern failed"
+            echo "✗ ERROR: Docker exec pattern failed - output file not created"
             docker stop vicar-test-container
             docker rm vicar-test-container
             exit 1
