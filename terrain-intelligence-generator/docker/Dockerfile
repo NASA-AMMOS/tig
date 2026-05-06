@@ -198,7 +198,10 @@ RUN ARCH_DIR="x86-64-linx" && \
                     echo "export VICSYS=DEVELOPMENT" >> /usr/local/bin/$cmdname; \
                     echo "export LD_LIBRARY_PATH=$VICAR_LIB_PATH:\$LD_LIBRARY_PATH" >> /usr/local/bin/$cmdname; \
                     echo "export PATH=${V2TOP}/p2/lib/$ARCH_DIR:${V2TOP}/tae53/bin/$TAE_ARCH_DIR:\$PATH" >> /usr/local/bin/$cmdname; \
-                    echo "exec $cmd \"\$@\"" >> /usr/local/bin/$cmdname; \
+                    echo "$cmd \"\$@\"" >> /usr/local/bin/$cmdname; \
+                    echo "exit_code=\$?" >> /usr/local/bin/$cmdname; \
+                    echo "# VICAR commands often return non-zero on success, treat 0-2 as success" >> /usr/local/bin/$cmdname; \
+                    echo "if [ \$exit_code -le 2 ]; then exit 0; else exit \$exit_code; fi" >> /usr/local/bin/$cmdname; \
                     chmod +x /usr/local/bin/$cmdname; \
                     WRAPPER_COUNT=$((WRAPPER_COUNT + 1)); \
                 fi; \
@@ -221,7 +224,10 @@ RUN ARCH_DIR="x86-64-linx" && \
                     echo "export VICSYS=DEVELOPMENT" >> /usr/local/bin/$cmdname; \
                     echo "export LD_LIBRARY_PATH=$VICAR_LIB_PATH:\$LD_LIBRARY_PATH" >> /usr/local/bin/$cmdname; \
                     echo "export PATH=${V2TOP}/tae53/bin/$TAE_ARCH_DIR:${V2TOP}/tae53/bin/all:\$PATH" >> /usr/local/bin/$cmdname; \
-                    echo "exec $cmd \"\$@\"" >> /usr/local/bin/$cmdname; \
+                    echo "$cmd \"\$@\"" >> /usr/local/bin/$cmdname; \
+                    echo "exit_code=\$?" >> /usr/local/bin/$cmdname; \
+                    echo "# VICAR commands often return non-zero on success, treat 0-2 as success" >> /usr/local/bin/$cmdname; \
+                    echo "if [ \$exit_code -le 2 ]; then exit 0; else exit \$exit_code; fi" >> /usr/local/bin/$cmdname; \
                     chmod +x /usr/local/bin/$cmdname; \
                     TAE_COUNT=$((TAE_COUNT + 1)); \
                 fi; \
@@ -244,7 +250,10 @@ RUN ARCH_DIR="x86-64-linx" && \
                     echo "export VICSYS=DEVELOPMENT" >> /usr/local/bin/$cmdname; \
                     echo "export LD_LIBRARY_PATH=$VICAR_LIB_PATH:\$LD_LIBRARY_PATH" >> /usr/local/bin/$cmdname; \
                     echo "export PATH=${V2TOP}/mars/lib/$ARCH_DIR:${V2TOP}/p2/lib/$ARCH_DIR:\$PATH" >> /usr/local/bin/$cmdname; \
-                    echo "exec $cmd \"\$@\"" >> /usr/local/bin/$cmdname; \
+                    echo "$cmd \"\$@\"" >> /usr/local/bin/$cmdname; \
+                    echo "exit_code=\$?" >> /usr/local/bin/$cmdname; \
+                    echo "# VICAR commands often return non-zero on success, treat 0-2 as success" >> /usr/local/bin/$cmdname; \
+                    echo "if [ \$exit_code -le 2 ]; then exit 0; else exit \$exit_code; fi" >> /usr/local/bin/$cmdname; \
                     chmod +x /usr/local/bin/$cmdname; \
                     MARS_COUNT=$((MARS_COUNT + 1)); \
                 fi; \
