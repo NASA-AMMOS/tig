@@ -1,4 +1,4 @@
-name: Build and Publish VICAR Native Toolkit
+name: Build and Publish Terrain Intelligence Generator
 
 on:
   push:
@@ -9,16 +9,16 @@ on:
     tags:
       - 'v*'
     paths:
-      - 'vicar-native-toolkit/docker/Dockerfile'
-      - '.github/workflows/build-publish-vicar-toolkit.yml'
+      - 'terrain-intelligence-generator/docker/Dockerfile'
+      - '.github/workflows/build-publish-terrain-intelligence-generator.yml'
   pull_request:
     branches:
       - main
       - master
       - develop
     paths:
-      - 'vicar-native-toolkit/docker/Dockerfile'
-      - '.github/workflows/build-publish-vicar-toolkit.yml'
+      - 'terrain-intelligence-generator/docker/Dockerfile'
+      - '.github/workflows/build-publish-terrain-intelligence-generator.yml'
   workflow_dispatch:
     inputs:
       vicar_version:
@@ -37,11 +37,11 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}/vicar-native-toolkit
+  IMAGE_NAME: ${{ github.repository }}/terrain-intelligence-generator
 
 jobs:
   build-and-push:
-    name: Build and Push VICAR Native Toolkit
+    name: Build and Push Terrain Intelligence Generator
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -127,8 +127,8 @@ jobs:
         id: build
         uses: docker/build-push-action@v5
         with:
-          context: ./vicar-native-toolkit
-          file: ./vicar-native-toolkit/docker/Dockerfile
+          context: ./terrain-intelligence-generator
+          file: ./terrain-intelligence-generator/docker/Dockerfile
           platforms: linux/amd64
           push: ${{ github.event_name != 'pull_request' && (github.event.inputs.push_to_registry != 'false') }}
           tags: ${{ steps.meta.outputs.tags }}
@@ -143,7 +143,7 @@ jobs:
       - name: Generate build summary
         if: always()
         run: |
-          echo "## VICAR Native Toolkit Build Summary" >> $GITHUB_STEP_SUMMARY
+          echo "## Terrain Intelligence Generator Build Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Build Information:**" >> $GITHUB_STEP_SUMMARY
           echo "- Repository: \`${{ github.repository }}\`" >> $GITHUB_STEP_SUMMARY
@@ -163,7 +163,7 @@ jobs:
             echo "- vicario converter (PNG, JPEG, TIFF)" >> $GITHUB_STEP_SUMMARY
             echo "- VISOR sample data access" >> $GITHUB_STEP_SUMMARY
             echo "- Python/Pillow dependencies" >> $GITHUB_STEP_SUMMARY
-            echo "- Docker exec pattern (vicar-native-toolkit)" >> $GITHUB_STEP_SUMMARY
+            echo "- Docker exec pattern (terrain-intelligence-generator)" >> $GITHUB_STEP_SUMMARY
             echo "- File persistence to host" >> $GITHUB_STEP_SUMMARY
             echo "- MARS commands (345 programs)" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
@@ -522,9 +522,9 @@ jobs:
         id: release-notes
         run: |
           cat > release-notes.md << 'EOF'
-          ## VICAR Native Toolkit - Open Source Edition
+          ## Terrain Intelligence Generator - Open Source Edition
           
-          This release provides a containerized version of the VICAR image processing system built from pre-built binaries distributed via GitHub releases.
+          This release provides a containerized version of the VICAR-based terrain intelligence generation system built from pre-built binaries distributed via GitHub releases.
           
           ### What's Included
           - VICAR image processing tools (pre-built binaries)
@@ -578,7 +578,7 @@ jobs:
           - Built from commit: ${{ github.sha }}
           
           ### Documentation
-          See the [vicar-native-toolkit README](vicar-native-toolkit/README.md) for detailed usage instructions.
+          See the [terrain-intelligence-generator README](terrain-intelligence-generator/README.md) for detailed usage instructions.
           EOF
       
       - name: Create Release

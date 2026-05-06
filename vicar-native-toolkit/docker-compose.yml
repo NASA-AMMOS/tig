@@ -1,7 +1,7 @@
 services:
   vicar-toolkit:
-    # Use the RPM-based image instead of building from source
-    image: vicar-tools:with-rpms
+    # Use the terrain-intelligence-generator image
+    image: terrain-intelligence-generator:latest
     container_name: vicar-sidecar
     
     # Keep container running

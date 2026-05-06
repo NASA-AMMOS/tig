@@ -1,11 +1,11 @@
-# VICAR Native Toolkit - Open Source Build
+# Terrain Intelligence Generator - Open Source Build
 # Uses pre-built VICAR binaries from GitHub releases
 # Based on Oracle Linux 8 (RHEL-compatible)
 
 FROM oraclelinux:8
 
-LABEL org.opencontainers.image.title="VICAR Open Source Tools"
-LABEL org.opencontainers.image.description="Open source distribution of VICAR image processing tools"
+LABEL org.opencontainers.image.title="Terrain Intelligence Generator"
+LABEL org.opencontainers.image.description="Open source distribution of VICAR-based terrain intelligence generation tools"
 LABEL org.opencontainers.image.version="5.0-opensource"
 LABEL org.opencontainers.image.source="https://github.com/NASA-AMMOS/VICAR"
 
@@ -339,7 +339,7 @@ WORKDIR /workspace
 ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
 
 # Display installation summary
-RUN echo "===== VICAR Open Source Installation Complete =====" && \
+RUN echo "===== Terrain Intelligence Generator Installation Complete =====" && \
     echo "V2TOP: ${V2TOP}" && \
     echo "Source: Pre-built binaries from https://github.com/NASA-AMMOS/VICAR/releases" && \
     echo "" && \
