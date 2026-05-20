@@ -1,7 +1,7 @@
 services:
   vicar-toolkit:
     # Use the terrain-intelligence-generator image
-    image: terrain-intelligence-generator:latest
+    image: ghcr.io/nasa-ammos/tig/terrain-intelligence-generator:opensource
     container_name: vicar-sidecar
     
     # Keep container running
@@ -18,7 +18,7 @@ services:
     
     # Volumes - mount workspace
     volumes:
-      - ./workspace:/workspace
+      - ./workspace:/workspace:Z
       # Linux X11 socket (commented out for macOS, will be overridden by .envrc)
       # - /tmp/.X11-unix:/tmp/.X11-unix
       # - ${HOME}/.Xauthority:/root/.Xauthority:ro
