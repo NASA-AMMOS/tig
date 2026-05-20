@@ -1,20 +1,12 @@
 # VICAR Native Toolkit - Demo Commands
 
-Demonstration of the VICAR Native Toolkit using docker-compose to provide a seamless, native-like command experience. Commands execute inside a Docker container but feel like they're running natively on your system.
-
-For direct Docker usage without the toolkit, see [../DEMO_COMMANDS.md](../DEMO_COMMANDS.md).
-
-## What This Demo Shows
-
-- **docker-compose** for persistent container management
-- **Workspace mounting** for seamless file access
-- **Command execution** that feels native to your system
-- **No wrapper scripts** - just straightforward docker-compose exec commands
+Demonstration of native-like command execution using direnv and wrapper scripts. VICAR commands execute inside a Docker container but feel like they're running natively on your system - no `docker-compose exec` or `docker exec` prefix needed!
 
 ## Prerequisites
 
 - Docker Engine 20.10+ or Docker Desktop
-- docker-compose (usually included with Docker Desktop)
+- direnv installed (`sudo apt install direnv` on Linux, `brew install direnv` on macOS)
+- Shell hook configured (add `eval "$(direnv hook bash)"` to ~/.bashrc or ~/.zshrc)
 - Access to terrain-intelligence-generator image
 
 ## Image Setup
@@ -32,72 +24,64 @@ docker pull ghcr.io/nasa-ammos/tig/terrain-intelligence-generator:opensource
 
 ---
 
-## Step 1: Configure docker-compose
-
-Verify `docker-compose.yml` uses the terrain-intelligence-generator image:
+## Step 1: Activate the Toolkit
 
 ```bash
-# Check current image setting
-grep "image:" docker-compose.yml
-
-# Should show:
-# image: ghcr.io/nasa-ammos/tig/terrain-intelligence-generator:opensource
-```
-
----
-
-## Step 2: Start the Toolkit
-
-Start the container using docker-compose:
-
-**Note for SELinux systems (Fedora, RHEL, CentOS):** If using volume mounts and getting "Permission denied" errors, add `:Z` flag to volumes in docker-compose.yml:
-```yaml
-volumes:
-  - ./workspace:/workspace:Z
-```
-
-```bash
-# Start container in background
-docker-compose up -d
-
-# Verify container is running
-docker-compose ps
-
-# Check logs (optional)
-docker-compose logs
+# Allow direnv to activate the environment
+direnv allow
 ```
 
 **Expected Output:**
 ```
-Creating network "vicar-native-toolkit_default" with the default driver
-Creating vicar-sidecar ... done
+[vicar-toolkit] Activating VICAR Native Toolkit...
+[vicar-toolkit] Image: ghcr.io/nasa-ammos/tig/terrain-intelligence-generator:opensource
+[vicar-toolkit] Creating new container 'vicar-sidecar'...
+[vicar-toolkit] Container started successfully
+[vicar-toolkit] Auto-discovering VICAR commands...
+[vicar-toolkit] Found 545 commands
+[vicar-toolkit] Generated 545 wrapper scripts
+[vicar-toolkit] ✅ Toolkit activated! VICAR commands now available.
 ```
+
+---
+
+## Step 2: Navigate to Workspace
+
+```bash
+# Enter the workspace directory
+cd workspace
+```
+
+All VICAR commands must be run from within the `workspace/` directory or its subdirectories.
 
 ---
 
 ## Step 3: Test Basic VICAR Commands
 
-All commands run via `docker-compose exec vicar-toolkit <command>`:
+Now you can use VICAR commands directly, as if they were installed natively!
 
 ```bash
-# Generate test image (64x64 pixels) in workspace
-docker-compose exec vicar-toolkit bash -c 'cd /workspace && gen test.vic 64 64'
+# Generate test image (64x64 pixels)
+gen test.vic 64 64
 
 # List the file
-docker-compose exec vicar-toolkit ls -lh /workspace/test.vic
-
-# The file is also accessible on your host system!
-ls -lh workspace/test.vic
+ls -lh test.vic
 
 # Generate larger test image (512x512 pixels)
-docker-compose exec vicar-toolkit bash -c 'cd /workspace && gen large.vic 512 512'
+gen large.vic 512 512
 
 # Check both files
-docker-compose exec vicar-toolkit bash -c 'ls -lh /workspace/*.vic'
-ls -lh workspace/*.vic
+ls -lh *.vic
 ```
 
-**Key Feature:** Files created in `/workspace` inside the container are immediately visible in the `workspace/` directory on your host!
+**Expected Output:**
+```
+Beginning VICAR task GEN
+GEN Version 2019-05-28
+GEN task completed
+```
+
+**Key Feature:** No `docker-compose exec` or `docker exec` needed! Commands work like native CLI tools.
 
 ---
 
@@ -105,16 +89,13 @@ ls -lh workspace/*.vic
 
 ```bash
 # Copy image
-docker-compose exec vicar-toolkit bash -c 'cd /workspace && copy test.vic test_copy.vic'
+copy test.vic test_copy.vic
 
 # Stretch image contrast
-docker-compose exec vicar-toolkit bash -c 'cd /workspace && stretch test.vic stretched.vic'
+stretch test.vic stretched.vic
 
 # List all VICAR images
-docker-compose exec vicar-toolkit bash -c 'ls -lh /workspace/*.vic'
-
-# View on host
-ls -lh workspace/*.vic
+ls -lh *.vic
 ```
 
 ---
@@ -125,331 +106,163 @@ Convert VICAR images to common formats:
 
 ```bash
 # Convert to PNG
-docker-compose exec vicar-toolkit vicario /workspace/test.vic /workspace/test.png
+vicario test.vic test.png
 
 # Convert to JPEG
-docker-compose exec vicar-toolkit vicario /workspace/test.vic /workspace/test.jpg
+vicario test.vic test.jpg
 
 # Convert to TIFF
-docker-compose exec vicar-toolkit vicario /workspace/test.vic /workspace/test.tiff
+vicario test.vic test.tiff
 
-# Verify conversions in container
-docker-compose exec vicar-toolkit ls -lh /workspace/test.*
-
-# View converted images on host
-ls -lh workspace/test.*
-
-# Open the PNG in your favorite image viewer
-xdg-open workspace/test.png  # Linux
-# open workspace/test.png     # macOS
+# Verify conversions
+ls -lh test.*
 ```
 
-**Benefit:** Converted images are immediately accessible on your host for viewing in any application!
+**Expected Output:**
+```
+Converting test.vic to intermediate format...
+Reading pixel data...
+   Image dimensions: 64 x 64
+Writing .PNG file...
+✅ Success: test.png (99 bytes)
+   Dimensions: 64 x 64
+```
 
 ---
 
 ## Step 6: Verify MARS Commands
 
+MARS commands are available as native-like wrappers:
+
 ```bash
-# List all MARS commands (74 total)
-docker-compose exec vicar-toolkit bash -c 'ls /usr/local/bin | grep "^mars" | head -20'
+# Test a MARS command exists
+marsmap --help 2>&1 | head -5
 
-# Count MARS commands
-docker-compose exec vicar-toolkit bash -c 'ls /usr/local/bin | grep "^mars" | wc -l'
+# Or check specific commands work
+type marsmap
+type marscorr
+type marsxyz
+```
 
-# Check specific commands
-docker-compose exec vicar-toolkit which marsmap
-docker-compose exec vicar-toolkit which marscorr
-docker-compose exec vicar-toolkit which marsxyz
+**Note:** 74 MARS commands are available. You can list them from the toolkit root with:
+```bash
+cd ..
+ls .direnv/wrappers | grep "^mars" | head -20
+cd workspace
 ```
 
 ---
 
-## Step 7: Check Available Commands
+## Step 7: Check Toolkit Status
 
 ```bash
-# Count total commands (545)
-docker-compose exec vicar-toolkit bash -c 'ls /usr/local/bin | wc -l'
-
-# List first 20 commands
-docker-compose exec vicar-toolkit bash -c 'ls /usr/local/bin | head -20'
-
-# Sample VICAR commands
-docker-compose exec vicar-toolkit bash -c 'ls /usr/local/bin | grep -E "^(gen|copy|stretch|label|list|hist)$"'
-```
-
----
-
-## Step 8: Check Environment
-
-```bash
-# View VICAR environment variables
-docker-compose exec vicar-toolkit bash -c 'echo "V2TOP=$V2TOP"'
-docker-compose exec vicar-toolkit bash -c 'echo "WORKSPACE=$WORKSPACE"'
-docker-compose exec vicar-toolkit bash -c 'echo "VICSYS=$VICSYS"'
-
-# Check VISOR data availability
-docker-compose exec vicar-toolkit bash -c 'find $VISOR_CALIB -type f | wc -l'
-docker-compose exec vicar-toolkit bash -c 'find $VISOR_SAMPLES -type f | wc -l'
+# Check toolkit status
+toolkit-status
 ```
 
 **Expected Output:**
-- V2TOP=/usr/local/vicar/dev
-- 1,461 calibration files
-- 249 sample files
+```
+VICAR Native Toolkit Status:
+  Container: vicar-sidecar
+  Status: Up X minutes
+  Wrappers: 549 commands
+  Image: ghcr.io/nasa-ammos/tig/terrain-intelligence-generator:opensource
+```
 
 ---
 
-## Step 9: Interactive Shell
+## Step 8: Interactive Container Shell (Optional)
 
-Enter the container for interactive work:
+Enter the container for direct interaction:
 
 ```bash
-# Start interactive shell
-docker-compose exec vicar-toolkit bash
+# Open interactive shell
+toolkit-shell
 
-# Now you're inside the container - run commands directly:
+# Inside container, run commands:
 cd /workspace
 gen interactive.vic 256 256
 label interactive.vic
-vicario interactive.vic interactive.png
-ls -lh
-
-# Exit when done
 exit
 
 # Files persist on host
-ls -lh workspace/interactive.*
+ls -lh interactive.*
 ```
 
 ---
 
-## Step 10: Advanced - Shell Aliases (Optional)
-
-Create shell aliases for a more native feel:
+### Step 9: Leave Directory (Deactivate)
 
 ```bash
-# Add to your ~/.bashrc or ~/.zshrc
-alias vicar='docker-compose -f /path/to/vicar-native-toolkit/docker-compose.yml exec vicar-toolkit'
-
-# Now you can run:
-vicar gen myimage.vic 512 512
-vicar label myimage.vic
-vicar vicario myimage.vic myimage.png
+# Go back to parent directory
+cd ../..
 ```
 
-Or create a helper script:
+When you leave the `vicar-native-toolkit` directory, the wrapper commands are automatically removed from your PATH. The container keeps running in the background.
+
+---
+
+### Step 10: Re-enter Directory (Reactivate)
 
 ```bash
-# Create ~/bin/vicar-run.sh
-cat > ~/bin/vicar-run.sh << 'EOF'
-#!/bin/bash
-cd /path/to/vicar-native-toolkit
-docker-compose exec vicar-toolkit "$@"
-EOF
+# Re-enter toolkit directory
+cd vicar-native-toolkit
 
-chmod +x ~/bin/vicar-run.sh
-
-# Use it:
-~/bin/vicar-run.sh gen test.vic 512 512
-~/bin/vicar-run.sh label test.vic
+# Commands are instantly available again!
+cd workspace
+gen another.vic 512 512
 ```
+
+The container is already running, so activation is instantaneous.
 
 ---
 
 ## Cleanup
 
-### Stop but Keep Container
-
-Keep the container around for fast restart:
+### Stop Container
 
 ```bash
-# Stop container (preserves state)
-docker-compose stop
-
-# Restart later (very fast)
-docker-compose start
-
-# Check status
-docker-compose ps
+# From vicar-native-toolkit directory
+toolkit-stop
 ```
 
-### Complete Removal
-
-Remove container completely:
+### Restart Container
 
 ```bash
-# Stop and remove container
-docker-compose down
+# Stop and remove container (will be recreated on next activation)
+toolkit-restart
 
-# Verify removal
-docker-compose ps
-
-# Files in workspace/ persist even after container removal!
-ls -lh workspace/
+# Leave and re-enter directory
+cd .. && cd vicar-native-toolkit
 ```
 
 ---
 
-## Comparison: docker-compose vs Direct Docker
-
-### docker-compose Advantages
-
-✅ **Simpler commands**: `docker-compose exec vicar-toolkit gen ...` vs `docker exec vicar-demo gen ...`  
-✅ **Configuration file**: All settings in docker-compose.yml  
-✅ **Service management**: Easy start/stop/restart  
-✅ **Network management**: Automatic network creation  
-✅ **Multi-container support**: Can add more services later  
-✅ **Environment variables**: Centralized in docker-compose.yml  
-
-### Direct Docker Advantages
-
-✅ **No extra config**: Works with any image immediately  
-✅ **Simpler for one-off tasks**: `docker run --rm` for quick tests  
-✅ **Lower overhead**: No docker-compose installation needed  
-
----
-
-## Creating Shell Wrapper Functions (Advanced)
-
-For the most native-like experience, add wrapper functions to your shell:
-
-```bash
-# Add to ~/.bashrc or ~/.zshrc
-export VICAR_TOOLKIT_DIR="/path/to/tig/vicar-native-toolkit"
-
-vicar() {
-    docker-compose -f "$VICAR_TOOLKIT_DIR/docker-compose.yml" exec vicar-toolkit "$@"
-}
-
-vicar-shell() {
-    docker-compose -f "$VICAR_TOOLKIT_DIR/docker-compose.yml" exec vicar-toolkit bash
-}
-
-vicar-up() {
-    docker-compose -f "$VICAR_TOOLKIT_DIR/docker-compose.yml" up -d
-}
-
-vicar-down() {
-    docker-compose -f "$VICAR_TOOLKIT_DIR/docker-compose.yml" down
-}
-
-# Reload shell
-source ~/.bashrc  # or source ~/.zshrc
-
-# Now use like native commands:
-vicar-up
-vicar gen test.vic 512 512
-vicar label test.vic
-vicar-shell
-```
-
----
-
-## Workspace Organization Tips
-
-```bash
-# Organize workspace by project
-workspace/
-├── project1/
-│   ├── inputs/
-│   └── outputs/
-├── project2/
-└── scratch/
-
-# Use project directories in commands
-docker-compose exec vicar-toolkit bash -c 'cd /workspace/project1 && gen input.vic 512 512'
-```
-
----
-
-## Summary
+## Summary - Native-like Commands
 
 ### What You Learned
 
-✅ Start/stop the toolkit with docker-compose  
-✅ Run VICAR commands via `docker-compose exec`  
-✅ Access files seamlessly between container and host  
-✅ Use interactive shell for exploratory work  
-✅ Create shell aliases for native-like experience  
+✅ Activate toolkit with `direnv allow`  
+✅ Use VICAR commands directly (no docker prefix)  
+✅ Commands work from `workspace/` directory  
+✅ Files persist on host automatically  
+✅ Leave directory to deactivate, re-enter to reactivate  
 
-### Key Benefits Over Direct Docker
+### Key Benefits
 
-1. **Persistent container**: Fast command execution (no startup overhead)
-2. **Configuration management**: Settings in docker-compose.yml
-3. **Easy service management**: `docker-compose up/down/restart`
-4. **Workspace mounting**: Automatic file synchronization
-5. **Extensible**: Easy to add more services (databases, web servers, etc.)
-
----
-
-## Troubleshooting
-
-### Container not starting
-
-```bash
-# Check logs
-docker-compose logs
-
-# Remove and recreate
-docker-compose down
-docker-compose up -d
-```
-
-### Permission errors on workspace files
-
-```bash
-# Check workspace permissions
-ls -la workspace/
-
-# Fix permissions (Linux)
-sudo chown -R $USER:$USER workspace/
-
-# SELinux systems - add :Z flag in docker-compose.yml
-# volumes:
-#   - ./workspace:/workspace:Z
-```
-
-### Commands not found
-
-```bash
-# Verify container is running
-docker-compose ps
-
-# Check image
-docker-compose config | grep image
-
-# Verify PATH in container
-docker-compose exec vicar-toolkit bash -c 'echo $PATH'
-```
-
-### Files not appearing on host
-
-```bash
-# Check volume mount
-docker-compose exec vicar-toolkit ls -la /workspace
-
-# Verify docker-compose.yml has workspace mount
-grep -A5 "volumes:" docker-compose.yml
-
-# Restart with recreate
-docker-compose down
-docker-compose up -d
-```
+1. **Native feel**: Commands work like locally installed tools
+2. **Fast**: Container stays running, no startup overhead
+3. **Automatic**: direnv activates/deactivates on directory entry/exit
+4. **Transparent**: 545 commands available instantly
+5. **Persistent**: Workspace files always accessible on host
 
 ---
 
 ## Time Estimate
 
-- Initial setup: 2-3 minutes
-- Demo execution: 5-10 minutes
-- **Total: 7-13 minutes**
+- Initial setup (direnv install): 2-3 minutes
+- Image pull (if needed): 5-10 minutes
+- Demo execution: 3-5 minutes
+- **Total: 10-18 minutes (5-8 if image already available)**
 
 ---
-
-## Next Steps
-
-- **Explore direnv integration**: See [README.md](./README.md) for automatic environment activation
-- **Learn more commands**: See [QUICKREF.md](./QUICKREF.md) for VICAR command reference
-- **Advanced workflows**: See [VICAR_NATIVE_TOOLKIT_WALKTHROUGH.md](./VICAR_NATIVE_TOOLKIT_WALKTHROUGH.md)
-- **Direct Docker approach**: See [../DEMO_COMMANDS.md](../DEMO_COMMANDS.md)
