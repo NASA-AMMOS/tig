@@ -167,6 +167,10 @@ RUN echo "Downloading and extracting VISOR sample data..." && \
 ENV VISOR_CALIB=${WORKSPACE}/visor_data/calib
 ENV VISOR_SAMPLES=${WORKSPACE}/visor_data/samples
 
+# Note: MARS calibration files should be mounted at runtime via:
+# -v /path/to/calibration:/usr/local/vicar/mars_calib:ro
+# and set MARS_CONFIG_PATH=/usr/local/vicar/mars_calib
+
 WORKDIR /workspace
 
 # Create symbolic links for common VICAR commands in /usr/local/bin
@@ -288,13 +292,31 @@ RUN dnf install -y python39-pip && \
     dnf clean all && \
     rm -rf /var/cache/dnf /var/cache/yum
 
-# Install Python dependencies for vicario (VICAR I/O converter)
-RUN python3 -m pip install --no-cache-dir --upgrade pip && \
-    python3 -m pip install --no-cache-dir Pillow>=9.0.0
+# Copy Java vicario JAR and create wrapper script
+# Note: vicario.jar must be built from https://github.jpl.nasa.gov/MIPL/vicario
+# Build with: mvn -U -Pshade clean install
+# Then copy target/vicario-*-FAT.jar to this directory as vicario.jar
+COPY vicario.jar /usr/local/bin/vicario.jar
 
-# Copy vicario script (VICAR to PNG/JPEG/TIFF converter)
-COPY scripts/vicario /usr/local/bin/vicario
-RUN chmod +x /usr/local/bin/vicario
+# Create vicario wrapper script that uses Java version with proper rescaling
+RUN echo '#!/bin/bash' > /usr/local/bin/vicario && \
+    echo '# vicario wrapper - calls Java vicario with proper parameters' >> /usr/local/bin/vicario && \
+    echo 'VICARIO_JAR="/usr/local/bin/vicario.jar"' >> /usr/local/bin/vicario && \
+    echo '' >> /usr/local/bin/vicario && \
+    echo '# Parse simple input/output format' >> /usr/local/bin/vicario && \
+    echo 'if [ $# -eq 2 ]; then' >> /usr/local/bin/vicario && \
+    echo '    INP="$1"' >> /usr/local/bin/vicario && \
+    echo '    OUT="$2"' >> /usr/local/bin/vicario && \
+    echo '    # Auto-detect format from extension' >> /usr/local/bin/vicario && \
+    echo '    EXT="${OUT##*.}"' >> /usr/local/bin/vicario && \
+    echo '    FORMAT=$(echo "$EXT" | tr '"'"'[:upper:]'"'"' '"'"'[:lower:]'"'"')' >> /usr/local/bin/vicario && \
+    echo '    # Run Java vicario with rescale for proper display' >> /usr/local/bin/vicario && \
+    echo '    java -jar "$VICARIO_JAR" inp="$INP" out="$OUT" format="$FORMAT" oform=byte rescale=true' >> /usr/local/bin/vicario && \
+    echo 'else' >> /usr/local/bin/vicario && \
+    echo '    # Pass through all arguments as-is' >> /usr/local/bin/vicario && \
+    echo '    java -jar "$VICARIO_JAR" "$@"' >> /usr/local/bin/vicario && \
+    echo 'fi' >> /usr/local/bin/vicario && \
+    chmod +x /usr/local/bin/vicario
 
 # Verify VICAR installation
 RUN echo "===== VICAR Installation Verification =====" && \
