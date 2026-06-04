@@ -1,6 +1,6 @@
-# Ignore everything except what we need
-*
-!vicario.jar
-!Dockerfile
-!vicario-python
-!mars_calibration_m2020/
+# Ignore generated/temporary files
+*.log
+*.pyc
+__pycache__/
+.git/
+.gitignore
