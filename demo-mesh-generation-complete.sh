@@ -12,6 +12,61 @@ IMAGE="ghcr.io/nasa-ammos/tig/terrain-intelligence-generator:opensource"
 CONTAINER="tig-mesh-demo"
 WORKSPACE="$(pwd)/workspace"
 
+# Parse arguments
+VISOR_SAMPLES=""
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    --visor-samples)
+      VISOR_SAMPLES="$2"
+      shift 2
+      ;;
+    --help|-h)
+      echo "Usage: $0 [--visor-samples PATH]"
+      echo ""
+      echo "Options:"
+      echo "  --visor-samples PATH   Path to VISOR sample data directory"
+      echo ""
+      echo "VISOR sample data contains pre-computed XYZ point clouds for testing."
+      echo "Download from: https://github.com/NASA-AMMOS/VICAR/releases/tag/5.0"
+      echo "  visor_sample_data_20230623.tar.gz"
+      echo ""
+      echo "Extract to a directory and provide path with --visor-samples"
+      exit 0
+      ;;
+    *)
+      echo "ERROR: Unknown option: $1"
+      echo "Run with --help for usage"
+      exit 1
+      ;;
+  esac
+done
+
+# Check for VISOR samples
+if [ -z "$VISOR_SAMPLES" ]; then
+  # Try default location
+  DEFAULT_VISOR="$(pwd)/visor_data/samples"
+  if [ -d "$DEFAULT_VISOR" ]; then
+    VISOR_SAMPLES="$DEFAULT_VISOR"
+  else
+    echo "ERROR: VISOR sample data not found."
+    echo ""
+    echo "Please download VISOR sample data from:"
+    echo "  https://github.com/NASA-AMMOS/VICAR/releases/tag/5.0"
+    echo "  visor_sample_data_20230623.tar.gz"
+    echo ""
+    echo "Extract and run:"
+    echo "  $0 --visor-samples /path/to/visor_data/samples"
+    exit 1
+  fi
+fi
+
+if [ ! -d "$VISOR_SAMPLES" ]; then
+  echo "ERROR: VISOR samples directory not found: $VISOR_SAMPLES"
+  exit 1
+fi
+
+echo "Using VISOR samples from: $VISOR_SAMPLES"
+
 # Find calibration files
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 if [ -f "$SCRIPT_DIR/find-calibration.sh" ]; then
@@ -27,7 +82,7 @@ else
     CALIB_DIR="$(pwd)/terrain-intelligence-generator/docker/mars_calibration_m20"
 fi
 
-echo "Using calibration from: $CALIB_DIR"
+echo "Using M2020 calibration from: $CALIB_DIR"
 if [ ! -d "$CALIB_DIR" ]; then
   echo "ERROR: Calibration directory not accessible"
   exit 1
@@ -38,10 +93,11 @@ mkdir -p "$WORKSPACE"
 echo "✓ Created workspace: $WORKSPACE"
 
 # Start container
-echo "Starting TIG container with calibration..."
+echo "Starting TIG container with calibration + VISOR data..."
 docker run -d --name "$CONTAINER" \
   -v "$WORKSPACE:/workspace:Z" \
   -v "$CALIB_DIR:/usr/local/vicar/mars_calib:ro,Z" \
+  -v "$VISOR_SAMPLES:/usr/local/vicar/visor_samples:ro,Z" \
   "$IMAGE" \
   tail -f /dev/null
 
@@ -54,8 +110,8 @@ echo "  Using VISOR NavCam XYZ sample (pre-computed stereo correlation)"
 echo "  Note: Full ZCam stereo requires radiometric preprocessing"
 docker exec "$CONTAINER" bash -c '
   cd /workspace
-  cp /usr/local/vicar/visor_data/samples/sample_data/OrthorectifiedMosaic/NLB_712299404XYZ_F0961766NCAM00353M1.IMG pointcloud.xyz
-  cp /usr/local/vicar/visor_data/samples/sample_data/StereoCorrelation/NLB_712299404EDR_F0961766NCAM00353M1.IMG texture.img
+  cp /usr/local/vicar/visor_samples/sample_data/OrthorectifiedMosaic/NLB_712299404XYZ_F0961766NCAM00353M1.IMG pointcloud.xyz
+  cp /usr/local/vicar/visor_samples/sample_data/StereoCorrelation/NLB_712299404EDR_F0961766NCAM00353M1.IMG texture.img
   echo "  XYZ:     pointcloud.xyz ($(du -h pointcloud.xyz | cut -f1))"
   echo "  Texture: texture.img ($(du -h texture.img | cut -f1))"
 '

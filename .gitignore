@@ -7,3 +7,7 @@ workspace-*/
 
 # Calibration files - camera models and parameters (not for public release)
 /calibration/
+
+# Binary JAR files - must be obtained separately
+terrain-intelligence-generator/docker/vicario.jar
+vicar-native-toolkit/.direnv/wrappers/vicario.jar

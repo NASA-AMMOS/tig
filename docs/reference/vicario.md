@@ -4,11 +4,13 @@ This Docker image uses the Java-based VicarIO library for VICAR image format con
 
 ## Obtaining vicario.jar
 
-### Option 1: Build from Source (Recommended)
+### Build from Source
+
+Once the public VicarIO repository becomes available:
 
 1. Clone the VicarIO repository:
    ```bash
-   git clone git@github.jpl.nasa.gov:MIPL/vicario.git
+   git clone https://github.com/NASA-AMMOS/vicario.git
    cd vicario
    ```
 
@@ -22,14 +24,7 @@ This Docker image uses the Java-based VicarIO library for VICAR image format con
    cp target/vicario-*-FAT.jar /path/to/tig/terrain-intelligence-generator/docker/vicario.jar
    ```
 
-### Option 2: Download from Artifactory (JPL Internal)
-
-If you have access to JPL's Artifactory:
-
-```bash
-# Download the latest release
-curl -o vicario.jar "https://cae-artifactory.jpl.nasa.gov/artifactory/maven-libs-release-local/gov/nasa/jpl/ammos/ids/vicario/2.7.0/vicario-2.7.0-FAT.jar"
-```
+**Note**: The repository is currently being prepared for public release. Check [NASA-AMMOS/vicario](https://github.com/NASA-AMMOS/vicario) for availability.
 
 ## Building the Docker Image
 

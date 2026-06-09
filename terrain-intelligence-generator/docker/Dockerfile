@@ -146,26 +146,15 @@ RUN echo "Downloading and extracting VICAR external libraries..." && \
         echo "ERROR: Could not find extracted externals directory" && exit 1; \
     fi
 
-# Download and extract VISOR calibration files (open source missions)
-RUN echo "Downloading and extracting VISOR calibration files..." && \
-    mkdir -p ${WORKSPACE}/visor_data/calib && \
-    curl -L "https://github.com/NASA-AMMOS/VICAR/releases/download/${VICAR_VERSION}/visor_calibration_20230608_phx.tar.gz" | \
-        tar -zxf - -C ${WORKSPACE}/visor_data/calib && \
-    echo "✓ Extracted Phoenix calibration files" && \
-    curl -L "https://github.com/NASA-AMMOS/VICAR/releases/download/${VICAR_VERSION}/visor_calibration_20230608_mer.tar.gz" | \
-        tar -zxf - -C ${WORKSPACE}/visor_data/calib && \
-    echo "✓ Extracted MER calibration files"
-
-# Download and extract VISOR sample data
-RUN echo "Downloading and extracting VISOR sample data..." && \
-    mkdir -p ${WORKSPACE}/visor_data/samples && \
-    curl -L "https://github.com/NASA-AMMOS/VICAR/releases/download/${VICAR_VERSION}/visor_sample_data_20230623.tar.gz" | \
-        tar -zxf - -C ${WORKSPACE}/visor_data/samples && \
-    echo "✓ Extracted VISOR sample data"
-
-# Set environment variables for VISOR data
-ENV VISOR_CALIB=${WORKSPACE}/visor_data/calib
-ENV VISOR_SAMPLES=${WORKSPACE}/visor_data/samples
+# Note: VISOR calibration and sample data should be mounted at runtime via:
+# -v /path/to/visor_calibration:/usr/local/vicar/visor_calib:ro
+# -v /path/to/visor_samples:/usr/local/vicar/visor_samples:ro
+# 
+# Download instructions available at:
+# https://github.com/NASA-AMMOS/VICAR/releases/tag/5.0
+# - visor_calibration_20230608_phx.tar.gz (Phoenix)
+# - visor_calibration_20230608_mer.tar.gz (MER)
+# - visor_sample_data_20230623.tar.gz (Sample stereo data)
 
 # Note: MARS calibration files should be mounted at runtime via:
 # -v /path/to/calibration:/usr/local/vicar/mars_calib:ro
@@ -281,8 +270,6 @@ RUN ARCH_DIR="x86-64-linx" && \
     echo "export V2TOP=${V2TOP}" > /etc/profile.d/vicar.sh && \
     echo "export WORKSPACE=${WORKSPACE}" >> /etc/profile.d/vicar.sh && \
     echo "export VICSYS=DEVELOPMENT" >> /etc/profile.d/vicar.sh && \
-    echo "export VISOR_CALIB=${WORKSPACE}/visor_data/calib" >> /etc/profile.d/vicar.sh && \
-    echo "export VISOR_SAMPLES=${WORKSPACE}/visor_data/samples" >> /etc/profile.d/vicar.sh && \
     echo "export LD_LIBRARY_PATH=$VICAR_LIB_PATH:\$LD_LIBRARY_PATH" >> /etc/profile.d/vicar.sh && \
     echo "export PATH=${V2TOP}/tae53/bin:${V2TOP}/bin:\$PATH" >> /etc/profile.d/vicar.sh && \
     chmod +x /etc/profile.d/vicar.sh
@@ -293,10 +280,11 @@ RUN dnf install -y python39-pip && \
     rm -rf /var/cache/dnf /var/cache/yum
 
 # Copy Java vicario JAR and create wrapper script
-# Note: vicario.jar must be built from https://github.jpl.nasa.gov/MIPL/vicario
+# Note: vicario.jar must be obtained separately
+# See VICARIO.md for build instructions from https://github.com/NASA-AMMOS/vicario
 # Build with: mvn -U -Pshade clean install
 # Then copy target/vicario-*-FAT.jar to this directory as vicario.jar
-COPY vicario.jar /usr/local/bin/vicario.jar
+COPY --chown=root:root vicario.jar /usr/local/bin/vicario.jar
 
 # Create vicario wrapper script that uses Java version with proper rescaling
 RUN echo '#!/bin/bash' > /usr/local/bin/vicario && \
@@ -345,18 +333,7 @@ RUN echo "===== VICAR Installation Verification =====" && \
     fi && \
     echo "" && \
     echo "Checking vicario installation:" && \
-    test -x /usr/local/bin/vicario && echo "✓ vicario installed" || echo "✗ vicario not found" && \
-    python3 -c "import PIL; print('✓ Pillow version:', PIL.__version__)" || echo "✗ Pillow not installed" && \
-    echo "" && \
-    echo "Checking VISOR data:" && \
-    if [ -d "${WORKSPACE}/visor_data/calib" ]; then \
-        CALIB_COUNT=$(find ${WORKSPACE}/visor_data/calib -type f 2>/dev/null | wc -l); \
-        echo "✓ VISOR calibration files: $CALIB_COUNT files"; \
-    fi && \
-    if [ -d "${WORKSPACE}/visor_data/samples" ]; then \
-        SAMPLE_COUNT=$(find ${WORKSPACE}/visor_data/samples -type f 2>/dev/null | wc -l); \
-        echo "✓ VISOR sample data: $SAMPLE_COUNT files"; \
-    fi
+    test -x /usr/local/bin/vicario && echo "✓ vicario installed" || echo "✗ vicario not found"
 
 # Create entrypoint script
 RUN echo '#!/bin/bash' > /usr/local/bin/docker-entrypoint.sh && \
@@ -386,9 +363,8 @@ RUN echo "===== Terrain Intelligence Generator Installation Complete =====" && \
     echo "  marsmos     - MARS mosaic generation" && \
     echo "  vicario     - Convert VICAR images to PNG/JPEG/TIFF" && \
     echo "" && \
-    echo "VISOR data available at:" && \
-    echo "  Calibrations: ${WORKSPACE}/visor_data/calib" && \
-    echo "  Sample data:  ${WORKSPACE}/visor_data/samples"
+    echo "Note: VISOR calibration and sample data not bundled." && \
+    echo "Mount externally or download from VICAR releases."
 
 # Keep container running
 CMD ["tail", "-f", "/dev/null"]
