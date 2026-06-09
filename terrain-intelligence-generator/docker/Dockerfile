@@ -39,8 +39,8 @@ RUN dnf -y --nogpgcheck --setopt=install_weak_deps=False --setopt=tsflags=nodocs
     xauth \
     # Motif runtime
     motif \
-    # Java runtime (headless for smaller size)
-    java-1.8.0-openjdk-headless \
+    # Java runtime (Java 11 for vicario.jar compatibility)
+    java-11-openjdk-headless \
     # Python runtime
     python39 \
     # Image processing runtime libraries

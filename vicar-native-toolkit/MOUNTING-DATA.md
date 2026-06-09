@@ -1,359 +1,395 @@
-# Mounting Camera Models and External Data
+# Mounting MARS Calibration Data
 
-This guide explains how to mount camera models, calibration files, mission data, and other external directories into the VICAR Native Toolkit container.
+This guide explains how to mount MARS calibration files (camera models, flat fields, parameter files) into the VICAR Native Toolkit container.
 
 ## Quick Start
 
-### 1. Identify Your Data Locations
+### 1. Set Environment Variable
 
-Camera models and calibration data are typically stored in:
-
-- **V2CONFIG_PATH**: VICAR configuration path (camera models, .cahv/.cahvor files)
-- **Mission Data**: Mars mission data (images, EDRs, RDRs)
-- **Pointing Files**: Mars pointing files (usually in `/proj/mars/def` on JPL systems)
-
-### 2. Edit `.envrc` Configuration
-
-Open `.envrc` and uncomment/configure the data mount variables:
+Set `MARS_CONFIG_PATH` to point to your calibration directory:
 
 ```bash
-# ===== Camera Models and Calibration Data =====
-# Uncomment and configure these paths to mount camera models and calibration data
-CAMERA_MODELS_DIR="${V2CONFIG_PATH:-/path/to/camera/models}"  # Camera calibration files
-MISSION_DATA_DIR="/data/missions"                              # Mission data (read-only)
-POINT_FILES_DIR="/proj/mars/def"                               # Mars pointing files
+# Add to shell profile (~/.bashrc or ~/.zshrc)
+export MARS_CONFIG_PATH="${HOME}/.mars_calib"
+
+# Or set temporarily
+export MARS_CONFIG_PATH="/path/to/mars_calibration_m20"
 ```
 
-### 3. Configure Your Paths
-
-#### Option A: Use Environment Variables (Recommended)
-
-Set environment variables in your shell profile (`~/.bashrc`, `~/.zshrc`):
+### 2. Restart Container
 
 ```bash
-# Add to ~/.zshrc or ~/.bashrc
-export V2CONFIG_PATH="/path/to/your/camera/models"
-export MISSION_DATA_PATH="/data/missions"
-export POINT_FILES_PATH="/proj/mars/def"
+cd vicar-native-toolkit
+toolkit-restart
 ```
 
-Then update `.envrc`:
+### 3. Verify Calibration Mounted
 
 ```bash
-CAMERA_MODELS_DIR="${V2CONFIG_PATH}"
-MISSION_DATA_DIR="${MISSION_DATA_PATH}"
-POINT_FILES_DIR="${POINT_FILES_PATH}"
+toolkit-verify-calib
 ```
 
-#### Option B: Hardcode Paths in `.envrc`
+Expected output:
+```
+=== MARS Calibration Verification ===
+MARS_CONFIG_PATH: /usr/local/vicar/mars_calib
+
+Mount point exists: /usr/local/vicar/mars_calib
+Contents:
+drwxr-xr-x camera_models
+drwxr-xr-x flat_fields
+drwxr-xr-x param_files
+
+Camera models: 226
+Flat fields: 381
+Param files: 3
+```
+
+## Configuration Options
+
+### Option 1: Shell Environment Variable (Recommended)
+
+Set in your shell profile for persistent configuration:
 
 ```bash
-CAMERA_MODELS_DIR="/Users/han/vicar/config"
-MISSION_DATA_DIR="/Users/han/data/missions"
-POINT_FILES_DIR="/Users/han/mars/pointing"
+# ~/.bashrc or ~/.zshrc
+export MARS_CONFIG_PATH="${HOME}/.mars_calib"
 ```
 
-### 4. Restart the Environment
+Then activate the toolkit:
 
 ```bash
-# Stop existing container
-docker stop vicar-sidecar && docker rm vicar-sidecar
-
-# Re-enter directory to restart with new mounts
-cd .. && cd -
-
-# Or reload direnv
-direnv reload
+cd vicar-native-toolkit
+direnv allow
 ```
 
-## Mount Points Inside Container
+### Option 2: Local Configuration File
 
-When configured, your data will be mounted at:
-
-| Host Path | Container Path | Purpose |
-|-----------|----------------|---------|
-| `$CAMERA_MODELS_DIR` | `/vicar/config` | Camera models (.cahv, .cahvor files) |
-| `$MISSION_DATA_DIR` | `/data/missions` | Mission data (images, EDRs) |
-| `$POINT_FILES_DIR` | `/proj/mars/def` | Mars pointing files |
-| `$WORKSPACE_ROOT` | `/workspace` | Your working directory |
-
-## Common Use Cases
-
-### Mounting Camera Models for Mars Processing
+Copy and edit the configuration file:
 
 ```bash
-# In .envrc, add:
-CAMERA_MODELS_DIR="/proj/mars/config"
-
-# Container will have access to:
-# /vicar/config/*.cahv
-# /vicar/config/*.cahvor
-# /vicar/config/m20/*.cahv
+cd vicar-native-toolkit
+cp .envrc.config.example .envrc.config
 ```
 
-Then in your VICAR commands:
+Edit `.envrc.config`:
 
 ```bash
-# Commands will automatically find camera models
-marsmap input.img output.map CAHVOR=/vicar/config/m20/camera.cahvor
+# Uncomment and set your path
+MARS_CONFIG_PATH="${HOME}/.mars_calib"
 ```
 
-### Mounting Read-Only Mission Data
-
-For large datasets you don't want to copy:
+Then activate:
 
 ```bash
-# In .envrc:
-MISSION_DATA_DIR="/Volumes/MissionData/M2020/sols"
-
-# Access in commands:
-marsmos /data/missions/sol_00123/*.img output.mosaic
+direnv allow
 ```
 
-### Mounting Multiple Directories
+### Option 3: Temporary Override
 
-You can add custom mounts by editing the `docker run` command in `.envrc`:
+Set for current shell session only:
 
 ```bash
-# Find the docker run command (around line 92-100) and add more volumes:
-docker run -d \
-    --name "${CONTAINER_NAME}" \
-    ${net_args} \
-    ${volume_args} \
-    -v "/custom/data:/custom/data:ro" \
-    -v "/scratch:/scratch" \
-    ${x11_args} \
-    -w /workspace \
-    "${CONTAINER_IMAGE}" \
-    tail -f /dev/null
+export MARS_CONFIG_PATH="/tmp/test_calibration"
+cd vicar-native-toolkit
+direnv allow
 ```
 
-## Mount Options
+## Calibration Directory Structure
 
-### Read-Only vs Read-Write
+Your calibration directory should contain:
 
-- **Read-only** (`:ro`): Prevents accidental modification of source data
-- **Read-write** (default): Allows writing
+```
+mars_calibration_m20/
+├── camera_models/
+│   ├── *.cahvor     # Camera geometry files
+│   └── *.cahvore    # Extended camera models
+├── flat_fields/
+│   └── *.IMG        # Radiometric correction data
+└── param_files/
+    └── *.xml        # Camera mapping configuration
+```
+
+MARS tools (marsmap, marsmos, marsmesh) automatically discover files from these subdirectories using the `$MARS_CONFIG_PATH` environment variable.
+
+## Mount Behavior
+
+### When MARS_CONFIG_PATH is Set and Valid
 
 ```bash
--v "/source:/dest:ro"    # Read-only
--v "/source:/dest"       # Read-write
+export MARS_CONFIG_PATH="/opt/mars_calibration_m20"
 ```
 
-**Recommendation**: Mount calibration data and mission archives as read-only.
+**Result:**
+- Host path: `/opt/mars_calibration_m20`
+- Container path: `/usr/local/vicar/mars_calib` (read-only)
+- Container environment: `MARS_CONFIG_PATH=/usr/local/vicar/mars_calib`
+- Log: `[vicar-toolkit] Mounting MARS calibration: /opt/mars_calibration_m20`
 
-### Symbolic Links
+### When MARS_CONFIG_PATH is Set but Directory Missing
 
-If your data contains symbolic links, Docker will follow them if:
+```bash
+export MARS_CONFIG_PATH="/nonexistent/path"
+```
 
-1. The symlink target is within the mounted volume
-2. The symlink target is in another mounted volume
-3. On macOS, symlink resolution may be slower due to VM layer
+**Result:**
+- Mount skipped
+- Container starts successfully
+- Log: `[vicar-toolkit] MARS_CONFIG_PATH set but directory not found: /nonexistent/path (skipping)`
+- MARS tools will fail if they require camera models
+
+### When MARS_CONFIG_PATH is Not Set
+
+```bash
+# unset MARS_CONFIG_PATH
+```
+
+**Result:**
+- Mount skipped silently
+- Container starts normally
+- No calibration available
+- Valid configuration for non-MARS workflows
+
+## Mount Details
+
+### Container Mount Point
+
+| Host Path | Container Path | Mount Options |
+|-----------|----------------|---------------|
+| `$MARS_CONFIG_PATH` | `/usr/local/vicar/mars_calib` | `ro,Z` (read-only, SELinux-safe) |
+
+### Environment Variable
+
+Inside the container, `MARS_CONFIG_PATH` is set to `/usr/local/vicar/mars_calib` automatically when calibration is mounted.
+
+MARS tools check this variable to locate:
+- Camera geometry files (`.cahvor`, `.cahvore`)
+- Radiometric correction data (flat field `.IMG` files)
+- Camera mapping XML files
+
+### Mount Options
+
+- **Read-only (`:ro`)**: Prevents accidental modification of calibration files
+- **SELinux-safe (`:Z`)**: Relabels files for container access on SELinux systems (Linux)
+- The `:Z` flag is safe on macOS and will be ignored if not needed
+
+## Configuration Examples
+
+### Example 1: TIG Repository Structure
+
+If you have the terrain-intelligence-generator repository cloned as a sibling:
+
+```bash
+# In .envrc.config
+MARS_CONFIG_PATH="${PWD}/../terrain-intelligence-generator/docker/mars_calibration_m20"
+```
+
+### Example 2: User Home Directory
+
+Store calibration in your home directory:
+
+```bash
+# In ~/.bashrc
+export MARS_CONFIG_PATH="${HOME}/.mars_calib"
+
+# Download/copy calibration files
+mkdir -p ~/.mars_calib
+# ... copy camera_models/, flat_fields/, param_files/ ...
+```
+
+### Example 3: System-Wide Installation
+
+For shared systems with calibration in `/opt`:
+
+```bash
+# In .envrc.config
+MARS_CONFIG_PATH="/opt/mars_calibration_m20"
+```
+
+### Example 4: Per-Mission Calibration
+
+Switch between missions using different paths:
+
+```bash
+# M2020
+export MARS_CONFIG_PATH="/data/mars/m2020/calibration"
+
+# MSL
+export MARS_CONFIG_PATH="/data/mars/msl/calibration"
+```
 
 ## Verification
 
-### Check Mounted Volumes
+### Using toolkit-verify-calib
+
+The built-in verification function checks calibration mount status:
 
 ```bash
-# Enter container
+toolkit-verify-calib
+```
+
+Output shows:
+1. Whether `MARS_CONFIG_PATH` is set
+2. Whether mount point exists
+3. Directory contents
+4. Count of camera models, flat fields, parameter files
+
+### Manual Verification
+
+Enter container shell:
+
+```bash
 toolkit-shell
+```
 
-# List mounted directories
-ls -la /vicar/config
-ls -la /data/missions
-ls -la /proj/mars/def
+Check environment and files:
 
-# Verify camera models
-find /vicar/config -name "*.cahv*" | head -10
+```bash
+# Check environment variable
+echo $MARS_CONFIG_PATH
 
-# Exit
+# List calibration directory
+ls -lh /usr/local/vicar/mars_calib/
+
+# Count camera models
+find /usr/local/vicar/mars_calib/camera_models -name "*.cahv*" | wc -l
+
+# Exit container
 exit
 ```
 
-### Test with VICAR Commands
+### Test with MARS Tools
+
+Run a MARS command that requires calibration:
 
 ```bash
-# Test marsmap with camera model
 cd workspace
 marsmap input.img output.map
 
-# Check if camera models are found
-label output.map | grep CAHV
+# If calibration is correct, marsmap will find camera models automatically
 ```
 
 ## Troubleshooting
 
-### "Permission denied" Errors
+### "Directory not found" Warning
 
-On Linux, ensure your user has read access:
-
-```bash
-ls -la /path/to/camera/models
-# Should show readable permissions
+**Symptom:**
+```
+[vicar-toolkit] MARS_CONFIG_PATH set but directory not found: /bad/path (skipping)
 ```
 
-If needed, adjust permissions:
+**Solution:**
+1. Verify path exists: `ls -la /bad/path`
+2. Fix typo in path
+3. Create directory if needed: `mkdir -p /correct/path`
+4. Restart container: `toolkit-restart`
 
-```bash
-chmod -R a+rX /path/to/camera/models
+### "Permission denied" Error
+
+**Symptom:**
+```
+docker: Error response from daemon: error while creating mount source path: permission denied
 ```
 
-### Mounts Not Visible in Container
+**Solution:**
+Ensure your user has read access to the calibration directory:
 
-1. Check if the directory exists on host:
+```bash
+# Check permissions
+ls -la /path/to/calibration
+
+# Fix if needed (Linux)
+chmod -R a+rX /path/to/calibration
+```
+
+### Empty Calibration Directory
+
+**Symptom:**
+```
+Camera models: 0
+Flat fields: 0
+Param files: 0
+```
+
+**Solution:**
+1. Verify host directory contains files: `ls -R $MARS_CONFIG_PATH`
+2. Ensure subdirectories exist: `camera_models/`, `flat_fields/`, `param_files/`
+3. Copy calibration files to correct subdirectories
+
+### MARS Tools Can't Find Camera Models
+
+**Symptom:**
+```
+[marsmap] Error: Unable to locate camera model file
+```
+
+**Solution:**
+1. Run `toolkit-verify-calib` to check mount status
+2. Verify `MARS_CONFIG_PATH` is set in container:
    ```bash
-   ls -la "${CAMERA_MODELS_DIR}"
+   docker exec vicar-sidecar bash -c 'echo $MARS_CONFIG_PATH'
    ```
+3. Check file naming conventions (tools expect specific patterns)
+4. Verify files are in `camera_models/` subdirectory
 
-2. Stop and remove container:
-   ```bash
-   docker stop vicar-sidecar && docker rm vicar-sidecar
-   ```
+### Mount Not Visible After Configuration
 
-3. Re-enter directory:
-   ```bash
-   cd .. && cd -
-   ```
+**Solution:**
+1. Container must be recreated for mount changes to take effect
+2. Stop container: `toolkit-stop`
+3. Re-enter directory: `cd .. && cd vicar-native-toolkit`
+4. Or use: `toolkit-restart` (requires re-entering directory)
 
-4. Verify mounts:
-   ```bash
-   docker inspect vicar-sidecar | grep Mounts -A 20
-   ```
+### macOS Specific Issues
 
-### macOS Performance Issues
+On macOS, Docker uses a VM layer:
 
-Docker on macOS uses a VM layer, which can slow down file I/O:
-
-**Solutions**:
+**Slow performance:**
 - Enable VirtioFS in Docker Desktop (Settings → General → VirtioFS)
-- For large datasets, copy frequently-used files to `workspace/` instead
-- Use `:cached` or `:delegated` mount options for performance:
-  ```bash
-  -v "/data:/data:ro,cached"
-  ```
+- For frequently-accessed files, consider copying to `workspace/` instead
 
-### Camera Models Not Found by VICAR
+**Symlink issues:**
+- Ensure symlink targets are within mounted volume
+- Absolute symlinks may not resolve correctly
 
-VICAR looks for camera models in specific environment variables:
+## Platform Differences
 
-1. Check container environment:
-   ```bash
-   toolkit-shell
-   env | grep -i config
-   env | grep -i vicar
-   ```
+### Linux
+- SELinux systems (Fedora, RHEL, CentOS) require `:Z` flag (already included)
+- Direct filesystem access (faster than macOS)
+- May need permission adjustments for shared directories
 
-2. Set environment variables in `.envrc`:
-   ```bash
-   # After the docker run command, add:
-   export V2CONFIG_PATH="/vicar/config"
-   ```
+### macOS
+- Uses Docker Desktop VM
+- `:Z` flag is safely ignored
+- VirtioFS recommended for better performance
+- Network mounts (SMB, NFS) work but may be slower
 
-3. Or pass to individual commands:
-   ```bash
-   docker exec -e V2CONFIG_PATH=/vicar/config vicar-sidecar marsmap ...
-   ```
+## Advanced: docker-compose.yml Configuration
 
-## Examples
+For docker-compose users, add calibration mount:
 
-### Example 1: Mount Local Camera Models
+```yaml
+volumes:
+  - ./workspace:/workspace:Z
+  - ${MARS_CONFIG_PATH}:/usr/local/vicar/mars_calib:ro,Z
 
-```bash
-# Host structure:
-# ~/mars/calibration/
-#   ├── m20/
-#   │   ├── zcam_left.cahvor
-#   │   └── zcam_right.cahvor
-#   └── msl/
-#       └── mastcam.cahv
-
-# In .envrc:
-CAMERA_MODELS_DIR="${HOME}/mars/calibration"
-
-# In container:
-# /vicar/config/m20/zcam_left.cahvor
-# /vicar/config/msl/mastcam.cahv
+environment:
+  - MARS_CONFIG_PATH=/usr/local/vicar/mars_calib
 ```
 
-### Example 2: Mount JPL Network Paths
-
-```bash
-# On JPL network (Linux):
-CAMERA_MODELS_DIR="/proj/mars/config"
-MISSION_DATA_DIR="/proj/mars/m2020/data"
-POINT_FILES_DIR="/proj/mars/def"
-
-# Access in container:
-marsmap /data/missions/sol_00001/*.img output.map
-```
-
-### Example 3: Mount S3 or Network Drives
-
-```bash
-# Mount network drive first (macOS):
-# Finder → Go → Connect to Server → smb://server/share
-
-# Then mount into container:
-MISSION_DATA_DIR="/Volumes/MarsData"
-
-# Or on Linux with CIFS:
-# sudo mount -t cifs //server/share /mnt/mars
-
-MISSION_DATA_DIR="/mnt/mars"
-```
-
-## Environment Variables
-
-VICAR tools look for these environment variables:
-
-| Variable | Purpose | Typical Value |
-|----------|---------|---------------|
-| `V2CONFIG_PATH` | Camera calibration files | `/vicar/config` |
-| `V2TOP` | VICAR installation root | `/usr/local/vicar/dev` |
-| `MARS_CONFIG_PATH` | Mars-specific config | `/vicar/config/mars` |
-| `POINT_METHOD` | Pointing correction method | `SPICE` or `PLACES` |
-
-Set these in the container by adding to `.envrc` after the `docker run` command:
-
-```bash
-# After container starts, export variables
-docker exec vicar-sidecar bash -c "echo 'export V2CONFIG_PATH=/vicar/config' >> /etc/bashrc"
-```
-
-Or set them when running commands:
-
-```bash
-docker exec -e V2CONFIG_PATH=/vicar/config vicar-sidecar marsmap ...
-```
-
-## Advanced: Dynamic Mounts
-
-For frequently changing data locations:
-
-```bash
-# In .envrc, add a function to prompt for paths:
-_mount_custom_data() {
-    read -p "Enter camera models path: " CAMERA_MODELS_DIR
-    export CAMERA_MODELS_DIR
-}
-
-# Call before starting container
-# _mount_custom_data
-```
-
-## Additional Resources
-
-- [VICAR User Guide](https://www-mipl.jpl.nasa.gov/external/VICAR_guide.html)
-- [Docker Volume Documentation](https://docs.docker.com/storage/volumes/)
-- [Mars Processing Tools](https://github.jpl.nasa.gov/MIPL)
+Uncomment and customize for your setup.
 
 ## Summary
 
-1. Identify your data paths (camera models, mission data, etc.)
-2. Edit `.envrc` to configure `CAMERA_MODELS_DIR`, `MISSION_DATA_DIR`, etc.
-3. Uncomment the configuration lines
-4. Restart the container: `docker stop vicar-sidecar && docker rm vicar-sidecar`
-5. Re-enter directory: `cd .. && cd -`
-6. Verify: `toolkit-shell` then `ls /vicar/config`
+1. **Set `MARS_CONFIG_PATH`** environment variable to your calibration directory
+2. **Restart container** with `toolkit-restart`
+3. **Verify** with `toolkit-verify-calib`
+4. **Use MARS tools** - they will automatically find calibration files
 
-Your camera models are now accessible to all VICAR commands!
+**Key points:**
+- Configuration is explicit - no auto-detection
+- Mount is read-only to protect source files
+- Container must be recreated for mount changes
+- Works identically on Linux and macOS
+- Non-MARS workflows work fine without calibration
