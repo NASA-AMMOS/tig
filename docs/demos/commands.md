@@ -178,21 +178,25 @@ docker exec vicar-demo bash -c 'find $VISOR_SAMPLES -type f | wc -l'
 - VISOR_CALIB: 1,461 files
 - VISOR_SAMPLES: 249 files
 
-### Step 8: Test Python and Pillow
+### Step 8: Test Java vicario
 
-The vicario converter uses Python with Pillow for format conversion:
+The vicario converter uses Java for VICAR image format conversion:
 
 ```bash
-# Check Python version
-docker exec vicar-demo python3 --version
+# Check Java version
+docker exec vicar-demo java -version
 
-# Check Pillow installed and version
-docker exec vicar-demo python3 -c "import PIL; print(f'Pillow version: {PIL.__version__}')"
+# Check vicario is installed
+docker exec vicar-demo which vicario
+
+# Test vicario wrapper
+docker exec vicar-demo bash -c 'ls /usr/local/bin/vicario.jar'
 ```
 
 **Expected Output:**
-- Python 3.9.25
-- Pillow version: 11.3.0
+- Java 11 (OpenJDK)
+- vicario: /usr/local/bin/vicario
+- vicario.jar found
 
 ### Step 9: Copy Files from Container to Host (Optional)
 

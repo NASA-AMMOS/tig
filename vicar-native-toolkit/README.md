@@ -98,7 +98,7 @@ The first time you `cd` into the directory:
 ```bash
 # All VICAR commands now work as if native
 vicar input.img output.img
-vic2pic image.vic image.png
+vicario image.vic image.png   # Java-based image converter
 label myfile.vic
 gen out.img 512 512
 
@@ -185,7 +185,7 @@ Edit `.envrc` and modify the `TOOLS` array:
 ```bash
 TOOLS=(
     vicar
-    vic2pic
+    vicario
     label
     gen
     marsmap
@@ -221,6 +221,24 @@ docker run -d \
     -v "/scratch:/scratch" \                     # Scratch space
     ...
 ```
+
+### Mounting Calibration Data
+
+For MARS processing tools (marsmap, marsmos, etc.), mount calibration files:
+
+```bash
+# Set environment variable
+export MARS_CONFIG_PATH="/path/to/mars_calibration_m20"
+
+# Restart container
+cd vicar-native-toolkit
+toolkit-restart
+
+# Verify calibration mounted
+toolkit-verify-calib
+```
+
+See [MOUNTING-DATA.md](MOUNTING-DATA.md) for detailed configuration options.
 
 ## Building VICAR from Source
 

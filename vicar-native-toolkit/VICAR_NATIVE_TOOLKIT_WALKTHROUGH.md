@@ -52,7 +52,7 @@ ls -la
 
 ## Step 2: Build the TIG Demo Docker Image
 
-The TIG demo image extends the base VICAR image with Python dependencies (numpy, scipy, Pillow).
+The TIG demo image extends the base VICAR image with Java vicario for image format conversion.
 
 ```bash
 # Build the TIG demo image
@@ -408,9 +408,12 @@ ls -lh *_edr.vic 2>/dev/null | wc -l
 toolkit-status | grep "Status:"
 # ✅ Should show: Status: running
 
-# 8. Python available? (for TIG demo scripts)
-docker exec vicar-sidecar python3 -c "import numpy, scipy, PIL; print('✅ Python deps OK')"
-# ✅ Should show: ✅ Python deps OK
+# 8. Java vicario available?
+docker exec vicar-sidecar which vicario
+# ✅ Should show: /usr/local/bin/vicario
+
+docker exec vicar-sidecar java -version
+# ✅ Should show: OpenJDK 11
 ```
 
 **All checks passed?** You're ready for the demo! 🎉
@@ -494,14 +497,14 @@ xhost +localhost
 
 ## What You've Accomplished
 
-✅ **Built vicar-tools:tig-demo image** with Python dependencies  
+✅ **Built vicar-tools:tig-demo image** with Java vicario  
 ✅ **Configured toolkit** for M20-G87 VICAR build  
 ✅ **Started long-running container** for fast command execution  
 ✅ **Generated 700+ wrapper scripts** for native-like commands  
 ✅ **Tested basic VICAR commands** (gen, hist, label)  
 ✅ **Verified Mars commands available** (marscorr, marsxyz, etc.)  
 ✅ **Prepared real M20 EDR data** for demo  
-✅ **Validated Python dependencies** (numpy, scipy, PIL)  
+✅ **Validated Java vicario** for image format conversion  
 
 ---
 

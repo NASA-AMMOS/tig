@@ -62,12 +62,23 @@ VICAR_ENV_VARS=(
 # ===== Workspace Configuration =====
 WORKSPACE_ROOT="${PWD}/workspace"
 
+# ===== MARS Calibration (Camera Models & Flat Fields) =====
+# Uncomment and set to mount M2020 calibration data
+# This should point to a directory containing:
+#   - camera_models/ (*.cahvor, *.cahvore files)
+#   - flat_fields/ (*.IMG radiometric correction files)
+#   - param_files/ (*.xml camera mapping files)
+#
+# Examples:
+# MARS_CONFIG_PATH="${HOME}/.mars_calib"
+# MARS_CONFIG_PATH="/opt/mars_calibration_m20"
+# MARS_CONFIG_PATH="${PWD}/../terrain-intelligence-generator/docker/mars_calibration_m20"
+#
+# If not set, container will start without calibration data.
+# MARS tools will fail if they require camera models.
+
 # ===== Additional Mounts (optional) =====
 # Uncomment and configure to mount additional directories
-
-# Camera models and calibration data
-# CAMERA_MODELS_DIR="/path/to/project/calibration"
-# CAMERA_MODELS_MOUNT="/project"
 
 # Mission data (read-only)
 # MISSION_DATA_DIR="/data/missions"

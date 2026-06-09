@@ -22,8 +22,9 @@ label image.vic
 # List image contents
 list image.vic
 
-# Convert VICAR to PNG (if vic2pic available)
-vic2pic image.vic image.png
+# Convert VICAR to PNG/JPEG/TIFF
+vicario image.vic image.png
+vicario image.vic image.jpg
 
 # MARS terrain processing
 marsmap input.img output.map
