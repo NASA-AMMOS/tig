@@ -4,10 +4,11 @@ Mars 2020 NavCam stereo terrain reconstruction using VICAR MARS tools.
 
 ## Overview
 
-Two demos are available for generating 3D terrain meshes from Mars 2020 NavCam stereo images:
+Three demos are available for generating 3D terrain meshes from Mars 2020 NavCam stereo images:
 
 1. **Full Pipeline** (`demo-mesh-generation-with-xyz.sh`) - Complete stereo correlation → XYZ → mesh
 2. **Quick Demo** (`demo-mesh-generation-complete.sh`) - Fast mesh generation from pre-computed XYZ
+3. **Native Toolkit** (`demo-mesh-native-toolkit.sh`) - Native-looking commands via vicar-native-toolkit
 
 ## Demo 1: Full Pipeline with XYZ Calculation
 
@@ -98,133 +99,297 @@ Fast demo using pre-computed XYZ point cloud from VISOR sample data.
 ### Data Source
 
 Uses pre-computed NavCam XYZ from VISOR samples:
-- **XYZ**: `NLB_712299404XYZ_F0961766NCAM00353M1.IMG`
-- **Texture**: `NLB_712299404EDR_F0961766NCAM00353M1.IMG`
-- **Mission**: Mars 2020 Perseverance
-- **Camera**: NavCam Left
+- **XYZ:** `nlf_1835_0829848458_777xyz_n0874924ncam00230_0a02llj08.img`
+- **Texture:** `nlm_1835_0829848458_777fdr_n0874924ncam00230_0a02llj01.vic`
 
-## Viewing Results
+VISOR (Visible Sightseeing Observables Repository) provides processed M2020 data products.
 
-### MeshLab
+## Demo 3: Native Toolkit with vicar-native-toolkit
 
-```bash
-meshlab workspace/terrain.obj
-```
+**NEW:** Demonstrates native-looking VICAR commands using the vicar-native-toolkit wrapper.
 
-**Note**: High-resolution meshes (>1M vertices) may exceed MeshLab memory limits.
+### What It Does
 
-### Blender
+Uses `vicar-native-toolkit` to provide native-looking command execution:
 
 ```bash
-blender workspace/terrain.obj
+# Instead of:
+docker exec vicar-sidecar marsmesh inp=cloud.xyz out=mesh.obj ...
+
+# You run:
+marsmesh inp=cloud.xyz out=mesh.obj ...
 ```
 
-Or: File → Import → Wavefront (.obj)
+Commands look and feel like native binaries but transparently execute inside Docker.
 
-### CloudCompare
+### Key Features
+
+- **Native appearance:** Commands execute from any directory in workspace
+- **Persistent container:** Long-running `vicar-sidecar` container (no startup overhead)
+- **Auto-discovery:** All 200+ VICAR commands automatically wrapped
+- **Path transparency:** Relative paths work naturally
+- **direnv activation:** Toolkit auto-activates when entering directory
+
+### Prerequisites
+
+- Docker Engine 20.10+
+- **direnv** installed and configured
+- M2020 calibration files (optional, required for stereo processing)
+- Shell integration: `eval "$(direnv hook bash)"` in `.bashrc`
+
+### Setup
 
 ```bash
-CloudCompare workspace/terrain.obj
+# 1. Install direnv
+sudo apt install direnv  # Ubuntu/Debian
+brew install direnv      # macOS
+
+# 2. Add to shell profile
+echo 'eval "$(direnv hook bash)"' >> ~/.bashrc
+source ~/.bashrc
+
+# 3. Trust the toolkit directory (one-time)
+cd vicar-native-toolkit
+direnv allow
 ```
 
-### Online Viewer
+### Usage
 
-Upload to https://3dviewer.net/ for browser-based viewing.
+```bash
+# With pre-computed XYZ (fast)
+./demo-mesh-native-toolkit.sh \
+  --xyz pointcloud.IMG \
+  --texture image.IMG
 
-## Input Requirements
+# With stereo pair (full pipeline)
+./demo-mesh-native-toolkit.sh \
+  --stereo-left NLM_*.VIC \
+  --stereo-right NRM_*.VIC
+```
 
-### M2020 NavCam Stereo Pair
+### How It Works
 
-**Naming Pattern:**
-- Left: `NL[M|B]_<SCLK>_*FDR_*.VIC`
-- Right: `NR[M|B]_<SCLK>_*FDR_*.VIC`
+1. **Container startup:** `direnv` detects `.envrc` and starts `vicar-sidecar` container
+2. **Wrapper generation:** Auto-discovers VICAR commands and creates wrapper scripts
+3. **PATH injection:** Adds wrappers to `$PATH` transparently
+4. **Command execution:** Wrappers forward to `docker exec` with proper working directory
 
-**Format:**
-- VICAR format
-- 16-bit grayscale (HALFWORD)
-- Typical sizes: 1280x960 (4x downsampled) or 5120x3840 (full-res)
+Example wrapper (`~/.direnv/wrappers/marsmesh`):
+```bash
+#!/bin/bash
+TOOL_NAME="marsmesh"
+CONTAINER_NAME="vicar-sidecar"
+WORKSPACE_ROOT="/path/to/workspace"
+REL_PATH="$(realpath --relative-to="${WORKSPACE_ROOT}" "${PWD}")"
+docker exec -i -w "/workspace/${REL_PATH}" "${CONTAINER_NAME}" "${TOOL_NAME}" "$@"
+```
 
-**Requirements:**
-- Same SCLK (spacecraft clock) timestamp
-- Same sequence ID (NCAM)
-- Radiometrically calibrated (FDR product type)
+### Toolkit Commands
 
-### Where to Get M2020 Data
+Once activated, you have access to:
 
-**PDS Imaging Node:**
-- https://pds-imaging.jpl.nasa.gov/
-- Search by Sol, SCLK, or instrument
-- Filter: Product Type = FDR
-- Download stereo pairs with matching SCLK
+**Core VICAR:**
+- `gen` - Generate test images
+- `label` - Display VICAR metadata
+- `list` - List image contents
+- `vicario` - VICAR to PNG/JPEG converter
+
+**MARS Terrain Tools:**
+- `marscorr`, `marscor3` - Stereo correlation
+- `marsxyz` - Disparity to XYZ conversion
+- `marsrfilt` - Rover hardware filtering
+- `marsmesh` - Mesh generation
+- `marsmap` - Orthoprojection
+- `marsmos` - Mosaicking
+
+**Utility Commands:**
+- `toolkit-status` - Show container status
+- `toolkit-shell` - Open bash shell in container
+- `toolkit-verify-calib` - Check MARS calibration
+- `toolkit-stop` - Stop and remove container
+- `toolkit-restart` - Restart container
+
+### Output
+
+Same as Demo 1, but generated in `vicar-native-toolkit/workspace/`:
+- `terrain.obj` - 3D mesh
+- `terrain.mtl` - Material file
+- `texture.png` - Texture image
+- `pointcloud.xyz` - XYZ point cloud
+- `pointcloud_filtered.xyz` - Filtered (rover hardware removed)
+
+### Advantages
+
+**vs. Docker Exec Scripts:**
+- ✓ Clean syntax: `marsmesh ...` not `docker exec container bash -c '...'`
+- ✓ Persistent container: No startup/cleanup overhead per command
+- ✓ Natural workflows: Chain commands with pipes/redirection
+- ✓ Interactive use: Better for development/experimentation
+
+**vs. Native Installation:**
+- ✓ Consistent environment: Same VICAR version for all users
+- ✓ Easy updates: `docker pull` to upgrade
+- ✓ No system pollution: VICAR stays containerized
+- ✓ Reproducible: Docker image hash ensures identical behavior
+
+### Container Lifecycle
+
+**Automatic management:**
+- Started on first `cd vicar-native-toolkit` (via direnv)
+- Reused across sessions (persistent)
+- Survives shell exit
+
+**Manual control:**
+```bash
+cd vicar-native-toolkit
+
+# Check status
+toolkit-status
+
+# Open shell in container
+toolkit-shell
+
+# Stop container
+toolkit-stop
+
+# Restart (stop + re-enter directory)
+toolkit-restart
+cd .. && cd -
+```
+
+### Advanced Configuration
+
+Edit `vicar-native-toolkit/.envrc.local`:
+
+```bash
+# Custom calibration path
+export MARS_CONFIG_PATH="/path/to/mars_calib"
+
+# Custom container name
+export CONTAINER_NAME="my-vicar-sidecar"
+
+# Custom image
+export CONTAINER_IMAGE="ghcr.io/nasa-ammos/tig/terrain-intelligence-generator:v2.0"
+
+# Mount parent directory (for accessing files outside workspace)
+export PARENT_DIR="/data"
+export PARENT_MOUNT="/external"
+```
+
+## Comparison Matrix
+
+| Feature | Demo 1 (docker exec) | Demo 2 (Quick) | Demo 3 (Native Toolkit) |
+|---------|---------------------|----------------|-------------------------|
+| **Execution** | Temporary container | Temporary container | Persistent sidecar |
+| **Syntax** | `docker exec ...` | `docker exec ...` | `marsmesh ...` |
+| **Startup time** | ~5s per run | ~5s per run | ~2s first time, instant after |
+| **Cleanup** | Manual | Manual | Automatic (optional) |
+| **Use case** | One-off demos | Quick testing | Development, interactive use |
+| **Commands** | Manual `docker exec` | Manual `docker exec` | Native-looking wrappers |
+| **Path handling** | Absolute in container | Absolute in container | Transparent relative paths |
+| **Prerequisites** | Docker | Docker | Docker + direnv |
+
+## Viewing Meshes
+
+All demos output standard Wavefront OBJ format:
+
+**Desktop viewers:**
+- **Blender:** File → Import → Wavefront (.obj) - Best for editing/rendering
+- **MeshLab:** File → Import Mesh - Best for analysis/measurements
+- **CloudCompare:** File → Open - Best for point cloud comparison
+
+**Online viewers:**
+- https://3dviewer.net/ - No installation required
+- Drag and drop `terrain.obj` + `texture.png`
+
+**Command-line inspection:**
+```bash
+# Vertex count
+grep -c "^v " terrain.obj
+
+# Triangle count
+grep -c "^f " terrain.obj
+
+# Bounding box
+grep "^v " terrain.obj | awk '{print $2,$3,$4}' | \
+  awk 'NR==1{min_x=max_x=$1; min_y=max_y=$2; min_z=max_z=$3}
+       {if($1<min_x) min_x=$1; if($1>max_x) max_x=$1;
+        if($2<min_y) min_y=$2; if($2>max_y) max_y=$2;
+        if($3<min_z) min_z=$3; if($3>max_z) max_z=$3}
+       END{print "X:", min_x, max_x; print "Y:", min_y, max_y; print "Z:", min_z, max_z}'
+```
 
 ## Troubleshooting
 
-### Container Already Exists
+### Demo 3 (Native Toolkit) Issues
 
+**"direnv not allowed":**
 ```bash
-docker stop tig-mesh-demo && docker rm tig-mesh-demo
+cd vicar-native-toolkit
+direnv allow
 ```
 
-### Out of Memory
-
-Reduce mesh resolution by adjusting `x_subsample` and `y_subsample` parameters in the script.
-
-### Correlation Fails
-
-Ensure:
-- Images are from same acquisition (matching SCLK)
-- Both images are same resolution
-- Calibration files present in `terrain-intelligence-generator/docker/mars_calibration_m20/`
-
-### Wrong Camera Model
-
-Verify image labels:
+**"Commands not found":**
 ```bash
-docker exec tig-mesh-demo label workspace/left.vic | grep INSTRUMENT_ID
-# Should show: NAVCAM_LEFT or NAVCAM_RIGHT
+# Check if container running
+docker ps | grep vicar-sidecar
+
+# Check PATH
+echo $PATH | grep -o wrappers
+
+# Re-activate
+cd .. && cd vicar-native-toolkit
 ```
 
-## Clean Up
-
+**"MARS calibration not found":**
 ```bash
-# Stop and remove container
-docker stop tig-mesh-demo && docker rm tig-mesh-demo
-
-# Remove workspace
-rm -rf workspace/
+cd vicar-native-toolkit
+toolkit-verify-calib
 ```
 
-## Advanced: Custom Parameters
+**Container won't start:**
+```bash
+# Check logs
+docker logs vicar-sidecar
 
-Edit demo scripts to adjust:
-- Correlation quality thresholds
-- XYZ filtering parameters
-- Mesh subsampling rates
-- Texture source (left vs right camera)
+# Force cleanup
+docker stop vicar-sidecar && docker rm vicar-sidecar
 
-See [Command Reference](commands.md) for tool parameter details.
+# Re-enter directory
+cd .. && cd vicar-native-toolkit
+```
 
-## Performance
+### General Issues
 
-### 1280x960 Images (4x downsampled)
+**Out of memory:**
+- Increase Docker memory limit (Settings → Resources)
+- Use smaller images (subframes instead of full resolution)
+- Reduce `res_max` in marsmesh
 
-| Stage | Time | Output |
-|-------|------|--------|
-| marscorr | ~6 min | 1.1M tiepoints |
-| marscor3 | ~2 min | 1.1M refined (87% coverage) |
-| marsxyz | ~1 min | 926K XYZ points |
-| marsmesh | ~30 sec | 1.2M vertices, 2.3M faces |
-| vicario | <1 sec | 1280x960 PNG |
-| **Total** | **~10 min** | **273M OBJ** |
+**Calibration errors:**
+- Verify MARS_CONFIG_PATH points to valid calibration directory
+- Check calibration includes camera models for your instrument
+- Use `find-calibration.sh` to locate calibration files
 
-### Memory Usage
+**Poor mesh quality:**
+- Use full-resolution images (not thumbnails/downsampled)
+- Adjust stereo correlation quality threshold
+- Tune marsmesh decimation parameters
 
-- **Minimum**: 8GB RAM
-- **Recommended**: 16GB RAM
-- **High-res (5120x3840)**: 32GB+ RAM
+## Data Sources
 
-## See Also
+**M2020 NavCam Images:**
+- VISOR: https://mars.nasa.gov/mmgis-maps/M20/Layers/json/
+- PDS Geosciences Node: https://pds-geosciences.wustl.edu/missions/mars2020/
+- Look for `*_FDR_*.VIC` (Full Data Record format)
 
-- [Getting Started](../getting-started.md) - Initial setup
-- [Command Reference](commands.md) - VICAR tool details
-- [Architecture](../architecture/components.md) - System overview
+**Sample Data:**
+- VISOR pre-computed XYZ products: `*_xyz_*.img`
+- Included in TIG repository: `workspace/samples/`
+
+## References
+
+- [VICAR Documentation](https://github.com/NASA-AMMOS/VICAR)
+- [MARS Tools Overview](../architecture/components.md)
+- [vicar-native-toolkit README](../../vicar-native-toolkit/README.md)
+- [Docker Best Practices](../development/docker.md)

@@ -252,6 +252,23 @@ else
   
   echo "  ✓ XYZ point cloud generated"
   
+  # Step 1c: Filter rover hardware from XYZ
+  echo ""
+  echo "  Step 1c: Filtering rover hardware (marsrfilt)..."
+  echo "  This removes rover body, wheels, mast from point cloud..."
+  docker exec "$CONTAINER" bash -c '
+    cd /workspace
+    export MARS_CONFIG_PATH=/usr/local/vicar/mars_calib
+    marsrfilt inp=pointcloud.xyz out=pointcloud_filtered.xyz
+  ' 2>&1 | grep -E "MARSRFILT|Version|Filtering|points|removed" || true
+  
+  if ! docker exec "$CONTAINER" test -f /workspace/pointcloud_filtered.xyz; then
+    echo "  ⚠ WARNING: marsrfilt failed, using unfiltered XYZ"
+    docker exec "$CONTAINER" bash -c 'cd /workspace && cp pointcloud.xyz pointcloud_filtered.xyz'
+  else
+    echo "  ✓ Rover hardware filtered"
+  fi
+  
   # Use right image as texture (matches reference mesh workflow)
   if [ -n "$TEXTURE_FILE" ]; then
     docker cp "$TEXTURE_FILE" "$CONTAINER:/workspace/texture.img"
@@ -263,13 +280,17 @@ fi
 echo ""
 echo "Step 2: Generating 3D mesh..."
 echo "  This takes ~30-90 seconds..."
-echo "  Note: Using x_subsample=2, y_subsample=2 for high-resolution mesh"
+echo "  Note: Using adaptive decimation with filtered XYZ to match M20 IDS pipeline"
 docker exec "$CONTAINER" bash -c '
   cd /workspace
   export MARS_CONFIG_PATH=/usr/local/vicar/mars_calib
-  marsmesh inp=pointcloud.xyz out=terrain.obj in_skin=texture.img \
-    x_subsample=2 y_subsample=2 maxgap=5
-' 2>&1 | grep -E "MARSMESH|Version|mesh|triangles|vertices|Writing" || true
+  marsmesh inp=pointcloud_filtered.xyz out=terrain.obj in_skin=texture.img \
+    x_subsample=1 y_subsample=1 \
+    range_min=0.2 range_mid=100 range_max=100 \
+    lod_levels=10 max_angle=87.5 \
+    res_min=3000 res_max=500000 density=1 -adaptive \
+    maxgap=5
+' 2>&1 | grep -E "MARSMESH|Version|mesh|triangles|vertices|Writing|LOD|decimat" || true
 
 if ! docker exec "$CONTAINER" test -f /workspace/terrain.obj; then
   echo "❌ ERROR: marsmesh failed to generate terrain.obj"
@@ -294,16 +315,17 @@ echo ""
 
 # List results
 echo "Step 4: Results summary"
-docker exec "$CONTAINER" bash -c 'cd /workspace && ls -lh pointcloud.xyz terrain.obj terrain.mtl texture.png 2>/dev/null'
+docker exec "$CONTAINER" bash -c 'cd /workspace && ls -lh pointcloud.xyz pointcloud_filtered.xyz terrain.obj terrain.mtl texture.png 2>/dev/null'
 echo ""
 
 echo "=== Demo Complete ==="
 echo ""
 echo "Generated files in: $WORKSPACE"
-echo "  - pointcloud.xyz      : 3D point cloud"
-echo "  - terrain.obj         : 3D mesh (Wavefront OBJ)"
-echo "  - terrain.mtl         : Material file"
-echo "  - texture.png         : Texture image"
+echo "  - pointcloud.xyz         : Raw 3D point cloud"
+echo "  - pointcloud_filtered.xyz: Filtered point cloud (rover hardware removed)"
+echo "  - terrain.obj            : 3D mesh (Wavefront OBJ)"
+echo "  - terrain.mtl            : Material file"
+echo "  - texture.png            : Texture image"
 echo ""
 echo "To view the mesh:"
 echo "  - Blender: File → Import → Wavefront (.obj)"
