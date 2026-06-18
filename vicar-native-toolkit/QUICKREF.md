@@ -1,13 +1,61 @@
-# Quick Reference: VICAR Native Toolkit (Open Source)
+# Quick Reference: VICAR Native Toolkit
 
-## Pull & Run
+## Automated Setup (Fastest)
+
+```bash
+# Clone repository
+git clone https://github.com/NASA-AMMOS/tig.git
+cd tig/vicar-native-toolkit
+
+# One-command bootstrap
+./bootstrap.sh
+
+# That's it! VICAR commands now available
+gen out=test.img nl=10 ns=10
+toolkit-status
+```
+
+**With MARS calibration:**
+```bash
+./bootstrap.sh --mars-calib /path/to/mars_calibration_m20
+```
+
+**Custom image:**
+```bash
+./bootstrap.sh --image myregistry/vicar:custom
+```
+
+See `./bootstrap.sh --help` for all options.
+
+## Pull & Run (Docker Only)
 
 ```bash
 # Pull latest open-source build
-docker pull ghcr.io/nasa-ammos/tig/vicar-native-toolkit:opensource
+docker pull ghcr.io/nasa-ammos/tig/terrain-intelligence-generator:opensource
 
 # Run with workspace
-docker run -it --rm -v $(pwd)/data:/workspace ghcr.io/nasa-ammos/tig/vicar-native-toolkit:opensource bash
+docker run -it --rm \
+  -v $(pwd)/data:/workspace \
+  ghcr.io/nasa-ammos/tig/terrain-intelligence-generator:opensource \
+  bash
+```
+
+## Native Toolkit Commands
+
+Once activated via bootstrap or direnv:
+
+```bash
+# Utility commands
+toolkit-status         # Show container status
+toolkit-shell          # Interactive shell in container
+toolkit-stop           # Stop and remove container
+toolkit-restart        # Restart container
+toolkit-verify-calib   # Verify MARS calibration (if configured)
+
+# VICAR commands work natively
+gen output.vic 512 512
+label image.vic
+marsmap input.img output.map
 ```
 
 ## Common Commands
@@ -79,23 +127,58 @@ ls /usr/local/bin | head -20   # Available wrappers
 which label                    # /usr/local/bin/label
 ```
 
+## Configuration
+
+```bash
+# View current config
+cat .envrc.local
+
+# Reconfigure
+./bootstrap.sh --config-only --image new-image:tag
+
+# Reload configuration
+direnv allow
+toolkit-restart
+```
+
+## Architecture
+
+The native toolkit uses a **symlink-based wrapper** approach:
+- Single `vicar-exec` script handles all commands
+- ~550 symlinks created dynamically
+- Fast activation (~1 second)
+- Low disk usage (~2MB)
+- Commands auto-discovered from container
+
 ## Troubleshooting
 
 ```bash
-# Check if image exists locally
-docker images | grep vicar-native-toolkit
+# Toolkit not activating
+direnv allow
+cd .. && cd -
 
-# Remove old image
-docker rmi ghcr.io/nasa-ammos/tig/vicar-native-toolkit:opensource
+# Container not running
+toolkit-restart
 
-# Pull latest
-docker pull ghcr.io/nasa-ammos/tig/vicar-native-toolkit:opensource
+# Commands not found
+echo $PATH | grep .direnv
+ls .direnv/wrappers/ | wc -l   # Should show ~550
 
-# Check container logs (if running detached)
-docker logs <container-id>
+# Check wrapper implementation
+file .direnv/wrappers/gen      # Should be symlink
+readlink .direnv/wrappers/gen  # Should point to ../vicar-exec
 
-# Enter running container
-docker exec -it <container-id> bash
+# Image issues
+docker images | grep terrain-intelligence-generator
+docker pull ghcr.io/nasa-ammos/tig/terrain-intelligence-generator:opensource
+
+# Container logs
+docker logs vicar-sidecar
+
+# Fresh start
+toolkit-stop
+rm -rf .direnv/
+direnv allow
 ```
 
 ## Links

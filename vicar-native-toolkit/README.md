@@ -20,9 +20,24 @@ This project implements the docker-native-wrapper pattern using:
 
 - **direnv** - Automatic environment activation when entering/leaving directories
 - **Long-running container** - Fast `docker exec` calls (not slow `docker run` per command)
-- **Wrapper scripts** - Each VICAR tool gets a transparent wrapper on your PATH
+- **Universal wrapper** - Single `vicar-exec` script handles all VICAR commands via symlinks
 - **Cross-platform X11** - Unix sockets on Linux, XQuartz TCP on macOS
 - **Smart bind-mounts** - Single workspace mount with intelligent CWD resolution
+
+### Wrapper Architecture
+
+Instead of generating 500+ individual wrapper scripts, the toolkit uses a symlink-based approach:
+
+1. **Single wrapper script** (`vicar-exec`) - Handles all VICAR commands
+2. **Command detection** - Auto-discovers available commands from container
+3. **Symlink generation** - Creates symlinks pointing to `vicar-exec` for each command
+4. **Dynamic routing** - `vicar-exec` determines which command to run based on symlink name
+
+**Benefits:**
+- Faster activation (~1 second vs 3-5 seconds)
+- Reduced disk usage (~2MB vs 3.5MB)
+- Single point of maintenance
+- Identical functionality
 
 ### Performance
 
@@ -48,9 +63,40 @@ This project implements the docker-native-wrapper pattern using:
 
 ## Quick Start
 
-### 1. One-Time System Setup
+### Automated Bootstrap (Recommended)
 
-#### macOS
+The easiest way to get started:
+
+```bash
+cd vicar-native-toolkit
+./bootstrap.sh
+```
+
+This single script:
+- ✓ Checks prerequisites (Docker, direnv)
+- ✓ Pulls the open-source VICAR container image
+- ✓ Creates configuration files
+- ✓ Activates the toolkit environment
+
+**With MARS calibration:**
+```bash
+./bootstrap.sh --mars-calib /path/to/mars_calibration_m20
+```
+
+**With custom image:**
+```bash
+./bootstrap.sh --image myregistry/vicar:custom
+```
+
+See `./bootstrap.sh --help` for all options.
+
+### Manual Setup (Advanced)
+
+If you prefer manual setup or need to build a custom image:
+
+#### 1. One-Time System Setup
+
+##### macOS
 ```bash
 cd vicar-native-toolkit
 chmod +x scripts/setup-macos.sh
@@ -62,7 +108,7 @@ chmod +x scripts/setup-macos.sh
 - After reboot, start XQuartz and keep it running
 - The first time you use X11 apps, macOS may prompt for accessibility permissions
 
-#### Linux
+##### Linux
 ```bash
 cd vicar-native-toolkit
 chmod +x scripts/setup-linux.sh
@@ -71,7 +117,9 @@ chmod +x scripts/setup-linux.sh
 
 **Note:** If Docker was just installed, log out and log back in for group permissions to take effect.
 
-### 2. Build the Docker Image
+#### 2. Build the Docker Image (Optional)
+
+If using a custom build instead of the open-source image:
 
 ```bash
 chmod +x scripts/build-image.sh
@@ -80,7 +128,7 @@ chmod +x scripts/build-image.sh
 
 This creates the `vicar-tools:latest` image with all dependencies installed.
 
-### 3. Activate the Toolkit
+#### 3. Activate the Toolkit
 
 ```bash
 cd vicar-native-toolkit
@@ -90,7 +138,7 @@ direnv allow
 The first time you `cd` into the directory:
 - direnv loads the `.envrc` configuration
 - The Docker container starts automatically
-- ~200 wrapper scripts are generated and added to your PATH
+- Wrapper scripts are generated dynamically and added to your PATH
 - X11 forwarding is configured for your platform
 
 ### 4. Use VICAR Tools
@@ -108,10 +156,13 @@ marsmos *.img output.mosaic
 
 # Utility commands
 toolkit-shell     # Open interactive shell in container
-toolkit-build     # Build VICAR from source (if you have source code)
+toolkit-status    # Show container status and wrapper count
 toolkit-stop      # Stop and remove container
 toolkit-restart   # Restart container (useful after config changes)
+toolkit-verify-calib  # Verify MARS calibration mounting (if configured)
 ```
+
+**Note:** All VICAR commands execute via a single universal wrapper (`vicar-exec`) with symlinks, reducing overhead and simplifying maintenance.
 
 ### 5. Deactivate
 
@@ -126,6 +177,8 @@ The container keeps running in the background. Re-entering the directory makes t
 ```
 vicar-native-toolkit/
 ├── .envrc                      # direnv config (auto-activates environment)
+├── .envrc.local                # User configuration (gitignored, created by bootstrap)
+├── bootstrap.sh                # Automated setup script (NEW)
 ├── docker/
 │   ├── Dockerfile              # Container definition
 │   └── build-vicar.sh          # VICAR build script (runs inside container)
@@ -135,8 +188,10 @@ vicar-native-toolkit/
 │   ├── setup-linux.sh          # Linux dependency installer
 │   └── build-image.sh          # Docker image builder
 ├── workspace/                  # Your working directory (mounted to /workspace)
-└── .direnv/                    # Auto-generated (wrappers live here)
-    └── wrappers/               # Generated wrapper scripts
+└── .direnv/                    # Auto-generated (gitignored)
+    ├── vicar-exec              # Universal command wrapper (generated)
+    ├── toolkit-utils           # Utility commands handler (generated)
+    └── wrappers/               # Symlinks to vicar-exec
 ```
 
 ## How It Works
@@ -146,22 +201,26 @@ vicar-native-toolkit/
 1. You `cd` into `vicar-native-toolkit/`
 2. direnv detects `.envrc` and asks for permission (first time only)
 3. `.envrc` runs:
+   - Loads configuration from `.envrc.local` (if exists)
    - Detects your platform (Linux/macOS)
    - Checks if Docker image exists
    - Starts the container (or uses existing one)
    - Configures X11 forwarding for your platform
-   - Generates wrapper scripts for each VICAR tool
+   - Generates `vicar-exec` and `toolkit-utils` scripts
+   - Auto-discovers available VICAR commands
+   - Creates symlinks for each command in `.direnv/wrappers/`
    - Adds `.direnv/wrappers/` to your PATH
 4. All VICAR commands are now available
 
 ### Command Execution Flow
 
 1. You run `vicar input.img output.img`
-2. The wrapper script at `.direnv/wrappers/vicar` executes
-3. It resolves your current directory relative to the workspace
-4. It runs `docker exec -i vicar-toolkit vicar input.img output.img`
-5. The command runs inside the container with access to your files
-6. Output appears in your terminal as if it were a native command
+2. The symlink at `.direnv/wrappers/vicar` points to `vicar-exec`
+3. `vicar-exec` detects the command name from `$0` (basename)
+4. It resolves your current directory relative to the workspace
+5. It runs `docker exec -w /workspace/<rel-path> vicar-sidecar vicar input.img output.img`
+6. The command runs inside the container with correct working directory
+7. Output appears in your terminal as if it were a native command
 
 ### X11 Forwarding
 
@@ -178,49 +237,54 @@ vicar-native-toolkit/
 
 ## Configuration
 
-### Customizing Tool List
+Configuration is managed through `.envrc.local` (created by `bootstrap.sh` or manually).
 
-Edit `.envrc` and modify the `TOOLS` array:
+### Using bootstrap.sh
 
-```bash
-TOOLS=(
-    vicar
-    vicario
-    label
-    gen
-    marsmap
-    marsmos
-    # Add your tools here
-)
-```
-
-Or let it auto-discover (requires VICAR to be built):
+The easiest way to configure:
 
 ```bash
-# In .envrc, replace the TOOLS array with:
-TOOLS=$(docker exec vicar-toolkit find /usr/local/vicar/ndev/bin -type f -executable -printf '%f\n' 2>/dev/null)
+# Default configuration
+./bootstrap.sh --config-only
+
+# Custom image
+./bootstrap.sh --config-only --image myregistry/vicar:v2.0
+
+# With MARS calibration
+./bootstrap.sh --config-only --mars-calib /data/mars_calibration_m20
+
+# Custom container name
+./bootstrap.sh --config-only --container my-vicar-container
 ```
 
-### Changing Workspace Location
+### Manual Configuration
 
-Edit `.envrc` and modify:
+Create `.envrc.local` with your settings:
 
 ```bash
-WORKSPACE_ROOT="${PWD}/workspace"    # Change this path
+# Container settings
+CONTAINER_NAME="vicar-sidecar"
+CONTAINER_IMAGE="ghcr.io/nasa-ammos/tig/terrain-intelligence-generator:opensource"
+
+# MARS calibration (optional)
+MARS_CONFIG_PATH="/path/to/mars_calibration_m20"
 ```
 
-### Using External Data
-
-Add additional mounts in `.envrc`:
+After creating/editing `.envrc.local`:
 
 ```bash
-docker run -d \
-    --name "${CONTAINER_NAME}" \
-    -v "${WORKSPACE_ROOT}:/workspace" \
-    -v "/data/missions:/data/missions:ro" \    # Read-only mission data
-    -v "/scratch:/scratch" \                     # Scratch space
-    ...
+direnv allow          # Reload configuration
+toolkit-restart       # Restart container with new settings
 ```
+
+### Available Configuration Options
+
+See [CONFIGURATION.md](CONFIGURATION.md) for detailed options including:
+- Custom container images
+- Workspace location
+- Additional volume mounts
+- Manual tool lists (disable auto-discovery)
+- Advanced Docker options
 
 ### Mounting Calibration Data
 

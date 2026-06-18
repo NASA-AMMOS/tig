@@ -2,61 +2,84 @@
 
 ## Overview
 
-The VICAR Native Toolkit now supports **configurable VICAR images**, allowing you to use any VICAR build including:
-- **RPM-based builds** (M20-G87, etc.)
-- **Source-built images** (development)
+The VICAR Native Toolkit supports **configurable VICAR images**, allowing you to use:
+- **Open-source builds** (ghcr.io/nasa-ammos/tig/terrain-intelligence-generator:opensource)
 - **Custom images** with specific configurations
+- **Local builds** with modified VICAR installations
+
+Configuration is managed through `.envrc.local` for easy customization without editing tracked files.
 
 ## Quick Start
 
-### 1. Choose Your Configuration
+### Using Bootstrap (Recommended)
 
-Copy the example configuration and customize it:
+The easiest way to configure the toolkit:
+
+```bash
+# Default opensource image
+./bootstrap.sh
+
+# Custom image
+./bootstrap.sh --image myregistry/vicar:v2.0
+
+# With MARS calibration
+./bootstrap.sh --mars-calib /path/to/mars_calibration_m20
+
+# Custom container name
+./bootstrap.sh --container my-vicar
+
+# Config only (no image pull)
+./bootstrap.sh --config-only --image custom:tag
+```
+
+The bootstrap script creates `.envrc.local` with your settings.
+
+### Manual Configuration
+
+Create `.envrc.local` manually:
 
 ```bash
 cp .envrc.config.example .envrc.local
-# Edit .envrc.local for your setup
+# Edit .envrc.local with your settings
 ```
 
-### 2. Configure for Your Image
-
-The toolkit includes a default configuration for `vicar-tools:tig-demo` (M20-G87 RPM build). To use a different image, edit `.envrc.local`:
-
-```bash
-# Change the image
-CONTAINER_IMAGE="your-image:tag"
-
-# Update paths to match your image's VICAR installation
-VICAR_INSTALL_PREFIX="/usr/local/vicar/your-build"
-VICAR_BIN_PATHS=(
-    "/usr/local/bin"
-    "${VICAR_INSTALL_PREFIX}/p2/lib/x86-64-linx"
-)
-```
-
-### 3. Activate
+Then activate:
 
 ```bash
 direnv allow
-# Container starts, wrappers generate, commands work natively!
+# Container starts, wrappers generate, commands available!
 ```
 
 ## Configuration Files
 
 ### Priority Order
 
-1. **`.envrc.local`** (gitignored) - Your personal configuration
-2. **`.envrc.config`** (tracked) - Project default configuration  
-3. **`.envrc.config.example`** - Template with all options
+1. **`.envrc.local`** (gitignored) - Your personal configuration (created by bootstrap or manually)
+2. **`.envrc.config`** (tracked) - Project default configuration (if exists)
+3. **`.envrc`** - Main activation script with defaults
 
 ### File Purposes
 
 | File | Purpose | Tracked |
 |------|---------|---------|
-| `.envrc` | Main activation script (don't edit) | ✅ Yes |
-| `.envrc.config` | Project default (M20-G87) | ✅ Yes |
-| `.envrc.config.example` | Template with all options | ✅ Yes |
-| `.envrc.local` | Your personal overrides | ❌ No (gitignored) |
+| `.envrc` | Main activation script + defaults | ✅ Yes |
+| `.envrc.config` | Optional project defaults | ✅ Yes |
+| `.envrc.local` | Your personal config | ❌ No (gitignored) |
+| `bootstrap.sh` | Automated configuration generator | ✅ Yes |
+
+### Generated Files (gitignored)
+
+These are created automatically on activation:
+
+```
+.direnv/
+├── vicar-exec              # Universal wrapper script
+├── toolkit-utils           # Utility commands handler  
+└── wrappers/               # Symlinks (~550 commands)
+    ├── gen -> ../vicar-exec
+    ├── marsmap -> ../vicar-exec
+    └── ...
+```
 
 ## Configuration Options
 
@@ -67,41 +90,73 @@ direnv allow
 CONTAINER_NAME="vicar-sidecar"
 
 # Docker image to use
-CONTAINER_IMAGE="vicar-tools:tig-demo"
+CONTAINER_IMAGE="ghcr.io/nasa-ammos/tig/terrain-intelligence-generator:opensource"
+
+# Workspace directory (host path mounted to /workspace in container)
+WORKSPACE_ROOT="${PWD}/workspace"
 ```
 
-### VICAR Paths
+### MARS Calibration
 
-Configure paths **inside the container** where VICAR is installed:
+Mount calibration files for Mars processing tools:
+
+```bash
+# Path to Mars calibration data on host
+MARS_CONFIG_PATH="/path/to/mars_calibration_m20"
+
+# Will be mounted at /usr/local/vicar/mars_calib in container
+# and MARS_CONFIG_PATH env var set inside container
+```
+
+**Using bootstrap:**
+```bash
+./bootstrap.sh --mars-calib /path/to/mars_calibration_m20
+```
+
+**Verify after activation:**
+```bash
+toolkit-verify-calib
+```
+
+### Command Auto-Discovery
+
+By default, commands are auto-discovered from the container:
+
+```bash
+# Enable auto-discovery (default)
+AUTO_DISCOVER_TOOLS=true
+
+# Commands searched in these paths (inside container)
+VICAR_BIN_PATHS=("/usr/local/bin")
+```
+
+**Manual tool list (disable auto-discovery):**
+
+```bash
+AUTO_DISCOVER_TOOLS=false
+
+MANUAL_TOOLS=(
+    gen
+    label
+    marsmap
+    marsmos
+    vicario
+)
+```
+
+### Advanced: Custom VICAR Paths
+
+For custom VICAR builds, configure paths **inside the container**:
 
 ```bash
 # Base installation directory
-VICAR_INSTALL_PREFIX="/usr/local/vicar/m20-g87"
+VICAR_INSTALL_PREFIX="/usr/local/vicar/custom"
 
 # Executable search paths (array)
 VICAR_BIN_PATHS=(
-    "/usr/local/bin"                                    # System commands
-    "${VICAR_INSTALL_PREFIX}/p2/lib/x86-64-linx"       # VICAR core
-    "${VICAR_INSTALL_PREFIX}/mars/lib/x86-64-linx"     # Mars tools
-)
-
-# Library paths (array)
-VICAR_LIB_PATHS=(
-    "${VICAR_INSTALL_PREFIX}/olb/x86-64-linx"
+    "/usr/local/bin"
+    "${VICAR_INSTALL_PREFIX}/p2/lib/x86-64-linx"
     "${VICAR_INSTALL_PREFIX}/mars/lib/x86-64-linx"
-)
-```
-
-### Environment Variables
-
-Set environment variables that VICAR tools need:
-
-```bash
-VICAR_ENV_VARS=(
-    "V2TOP=${VICAR_INSTALL_PREFIX}"
-    "R2LIB=${VICAR_INSTALL_PREFIX}"
-    "VICAR_PARAM=/projects/project/calibration/param_files"
-    "VICAR_CALIB=/projects/project/calibration"
 )
 ```
 

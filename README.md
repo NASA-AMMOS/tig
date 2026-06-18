@@ -16,7 +16,26 @@ TIG provides Docker-based tools for generating 3D terrain meshes from Mars rover
 
 ## Quick Start
 
-### Run Mesh Generation Demo
+### Option 1: Automated Native Toolkit (Recommended)
+
+Get native-like VICAR commands in one step:
+
+```bash
+cd vicar-native-toolkit
+./bootstrap.sh
+# ✓ Pulls Docker image
+# ✓ Starts container  
+# ✓ Creates ~550 command wrappers
+# ✓ Ready in <30 seconds
+
+# Now use VICAR commands directly
+gen out=test.img nl=10 ns=10
+toolkit-status
+```
+
+See [vicar-native-toolkit/README.md](vicar-native-toolkit/README.md) for details.
+
+### Option 2: Run Mesh Generation Demo
 
 ```bash
 # Pull the Docker image
@@ -46,10 +65,19 @@ meshlab workspace/terrain.obj
 
 ## Components
 
+## Components
+
 ### VICAR Native Toolkit
-Docker environment with VICAR tools wrapped for native-like CLI usage.
-- 📁 `vicar-native-toolkit/`
-- 📖 [Toolkit README](vicar-native-toolkit/README.md)
+
+Docker environment with VICAR tools wrapped for native-like CLI usage. Features:
+- ✨ **One-command setup** via `bootstrap.sh`
+- 🚀 **Fast activation** (~1 second, symlink-based wrappers)
+- 🔧 **Auto-discovers** ~550 VICAR commands
+- 🐳 **Custom image support** via `--image` flag
+- 📊 **MARS calibration mounting** for terrain processing
+
+📁 `vicar-native-toolkit/`  
+📖 [Toolkit README](vicar-native-toolkit/README.md) | [Quick Reference](vicar-native-toolkit/QUICKREF.md)
 
 ### Terrain Intelligence Generator
 Pre-built demos and M2020 calibration for mesh generation.
