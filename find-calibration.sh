@@ -20,8 +20,8 @@ find_calibration() {
     
     # Check relative to script location (for repo demos)
     local script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-    if [ -d "$script_dir/terrain-intelligence-generator/docker/mars_calibration_m20" ]; then
-        echo "$script_dir/terrain-intelligence-generator/docker/mars_calibration_m20"
+    if [ -d "$script_dir/calibration" ]; then
+        echo "$script_dir/calibration"
         return 0
     fi
     
@@ -105,14 +105,14 @@ To specify calibration location, use one of:
 
 The script will check these locations in order:
   1. $MARS_CALIB_PATH
-  2. ./terrain-intelligence-generator/docker/mars_calibration_m20 (repo structure)
+  2. ./calibration (repo structure)
   3. ~/.mars_calib
   4. /opt/mars_calib
   5. ./mars_calibration_m20
   6. ./mars_calib
 
 For TIG repository users:
-  Calibration is already in: ./terrain-intelligence-generator/docker/mars_calibration_m20/
+  Calibration is already in: ./calibration/
 
 EOF
 }

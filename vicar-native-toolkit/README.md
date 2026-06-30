@@ -45,6 +45,9 @@ Instead of generating 500+ individual wrapper scripts, the toolkit uses a symlin
 - **vs. docker run**: 10-30x faster than per-command containers
 - **vs. native**: Slight overhead, but allows consistent environment across platforms
 
+**macOS Apple Silicon Optimization:**
+For M1/M2/M3 Macs, enable Rosetta 2 for 4-6x faster processing. See [macOS ARM64 Optimization Guide](docs/MACOS-ARM64-OPTIMIZATION.md) for details.
+
 ## Prerequisites
 
 ### macOS (M1/M2/Intel)

@@ -27,9 +27,9 @@ Fast, one-time mesh generation from stereo pairs or XYZ files.
 **Requirements:**
 - Left and right images from **same acquisition** (matching SCLK timestamp)
 - Full-resolution or subframe images (not downsampled/thumbnails)
-- MARS calibration files (auto-detected in `terrain-intelligence-generator/docker/mars_calibration_m20`)
+- MARS calibration files mounted at `./calibration/` (see setup below)
 
-**Output:** `workspace/terrain.obj`, `workspace/texture.png`
+**Output:** `terrain-intelligence-generator/docker/workspace/terrain.obj`, `texture.png`
 
 **Cleanup:**
 ```bash
@@ -130,11 +130,12 @@ VISOR provides pre-computed XYZ point clouds:
 ### "MARS calibration not found"
 
 ```bash
+# Calibration must be mounted at runtime (not included in image)
 # Check calibration location
-ls terrain-intelligence-generator/docker/mars_calibration_m20/camera_models/
+ls calibration/camera_models/
 
-# If missing, calibration is included in the Docker image
-# Or download from: https://github.com/NASA-AMMOS/VICAR
+# If missing, download from: https://github.com/NASA-AMMOS/VICAR
+# Place in ./calibration/ directory
 ```
 
 ### "Stereo images don't match"
@@ -197,10 +198,10 @@ cd .. && cd vicar-native-toolkit
 ### Quick Test with Sample Data
 
 ```bash
-# Using existing workspace data
+# Using vicar-native-toolkit workspace data
 ./demo-mesh-generation-with-xyz.sh \
-  --xyz workspace/pointcloud.xyz \
-  --texture workspace/texture.img
+  --xyz vicar-native-toolkit/workspace/pointcloud.xyz \
+  --texture vicar-native-toolkit/workspace/texture.img
 ```
 
 ### Process Real Mars 2020 Data
@@ -218,7 +219,7 @@ cd /path/to/tig
   --stereo-right /tmp/NRM_*.VIC
 
 # 3. View mesh
-# Import workspace/terrain.obj into Blender/MeshLab
+# Import terrain-intelligence-generator/docker/workspace/terrain.obj into Blender/MeshLab
 ```
 
 ### Interactive Exploration
@@ -232,7 +233,7 @@ direnv allow
 cd workspace
 gen out=test.img nl=100 ns=100
 label test.img
-marsmesh inp=../../../workspace/pointcloud.xyz out=custom.obj
+marsmesh inp=pointcloud.xyz out=custom.obj
 
 # 3. Container stays running for next session
 ```

@@ -28,7 +28,7 @@ Complete stereo mesh generation pipeline from raw stereo pair.
 - Docker Engine 20.10+
 - M2020 NavCam stereo pair (FDR format)
 - 16GB RAM recommended
-- M2020 calibration files (included in Docker image)
+- M2020 calibration files mounted at `./calibration/` (see [Calibration Setup](#calibration-setup))
 
 ### Usage
 

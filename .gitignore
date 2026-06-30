@@ -4,10 +4,46 @@ workspace-*/
 
 # Demo data mount points
 /m2020/
+/data/
 
 # Calibration files - camera models and parameters (not for public release)
 /calibration/
 
-# Binary JAR files - must be obtained separately
-terrain-intelligence-generator/docker/vicario.jar
-vicar-native-toolkit/.direnv/wrappers/vicario.jar
+# IDE files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+
+# Logs
+*.log
+demo-run.log
+
+# MacOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Temporary files
+*.tmp
+*.bak
+*.old
+*.backup
+
+# direnv
+.envrc.local
+.direnv/
+
+# Docker
+.dockerignore

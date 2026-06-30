@@ -174,6 +174,16 @@ marsrfilt inp=pointcloud.xyz out=pointcloud_filtered.xyz
 **Time:** ~5 seconds  
 **Output:** `pointcloud_filtered.xyz` (rover parts removed)
 
+### Step 3: Filter Rover Hardware
+
+```bash
+marsrfilt inp=pointcloud.xyz out=pointcloud_filtered.xyz
+```
+
+**Time:** ~5 seconds  
+**Output:** `pointcloud_filtered.xyz` (rover parts removed)
+- `terrain.lbl` - PDS4 metadata label describing mesh structure
+
 ### Step 4: Generate 3D Mesh
 
 ```bash
@@ -191,18 +201,20 @@ marsmesh inp=pointcloud_filtered.xyz out=terrain.obj \
 
 **Note:** marsmesh generates multiple output files:
 - `terrain.obj` - 3D mesh in Wavefront OBJ format (~55MB)
-- `terrain.mtl` - Material file referencing texture
+- `terrain.mtl` - Material file referencing right.png (auto-converted from right.vic)
 - `terrain.iv` - Open Inventor format mesh (~47MB)
 - `terrain.lbl` - PDS4 metadata label describing mesh structure
 
 ### Step 5: Convert Texture to PNG
 
 ```bash
-vicario right.vic texture.png
+vicario right.vic right.png
 ```
 
 **Time:** ~2 seconds  
-**Output:** `texture.png`
+**Output:** `right.png` (matches the MTL texture reference)
+
+**Note:** marsmesh automatically converts `.vic` to `.png` in the MTL file, so we create `right.png` to match
 
 ### Step 6: View Results
 
@@ -466,6 +478,16 @@ marsmesh inp=../data/pointcloud.xyz out=terrain.obj
 
 ## Performance Tips
 
+### macOS Apple Silicon Optimization
+
+**For M1/M2/M3 Macs:** Enable Rosetta 2 for dramatically faster processing:
+
+- **Without optimization:** 10-15 minutes for full pipeline
+- **With Rosetta 2:** ~4 minutes for full pipeline
+- **Improvement:** 4-6x faster
+
+See [macOS ARM64 Optimization Guide](docs/MACOS-ARM64-OPTIMIZATION.md) for setup instructions.
+
 ### Speed Comparison
 
 | Method | Command Latency | Container Startup |
@@ -669,6 +691,7 @@ echo $PATH
 - **[Configuration Guide](docs/CONFIGURATION.md)** - Advanced setup options
 - **[Mounting Data](docs/MOUNTING-DATA.md)** - Volume mount configuration
 - **[Open Source Build](docs/OPENSOURCE-BUILD.md)** - Build from source
+- **[macOS ARM64 Optimization](docs/MACOS-ARM64-OPTIMIZATION.md)** - Speed up on Apple Silicon (4-6x faster)
 
 ## Key Takeaways
 

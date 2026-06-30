@@ -1,12 +1,93 @@
-# Terrain Intelligence Generator - Open Source Build
+# Terrain Intelligence Generator - Open Source Build (Optimized)
 # Uses pre-built VICAR binaries from GitHub releases
 # Based on Oracle Linux 8 (RHEL-compatible)
+# 
+# This is a multi-stage build that reduces image size from ~8GB to ~2GB
+# by downloading and extracting archives in a builder stage, then copying
+# only the final files to the runtime stage.
 
+# ============================================================================
+# Stage 1: Builder - Download and extract VICAR archives
+# ============================================================================
+FROM oraclelinux:8 AS builder
+
+ARG VICAR_VERSION=5.0
+ARG BINARIES_FILE=vicar_open_bin_x86-64-linx_5.0.tar.gz
+ARG EXTERNAL_FILE=vicar_open_ext_x86-64-linx_5.0.tar.gz
+
+WORKDIR /build
+
+# Install minimal tools for downloading
+RUN dnf install -y curl tar gzip && \
+    dnf clean all
+
+# Download and extract VICAR binaries
+RUN echo "Downloading VICAR binaries..." && \
+    curl -L "https://github.com/NASA-AMMOS/VICAR/releases/download/${VICAR_VERSION}/${BINARIES_FILE}" -o vicar_bin.tar.gz && \
+    echo "Extracting VICAR binaries..." && \
+    mkdir -p /vicar/dev && \
+    tar -xzf vicar_bin.tar.gz && \
+    EXTRACTED_DIR=$(ls -d vicar_open_bin_* 2>/dev/null | head -1) && \
+    if [ -d "$EXTRACTED_DIR/vicar_open_5.0" ]; then \
+        cp -r "$EXTRACTED_DIR/vicar_open_5.0"/* /vicar/dev/; \
+    else \
+        cp -r "$EXTRACTED_DIR"/* /vicar/dev/; \
+    fi && \
+    echo "✓ VICAR binaries extracted" && \
+    echo "Removing unnecessary files (source, docs, tests)..." && \
+    cd /vicar/dev && \
+    rm -rf p2/prog p3/prog mars/src && \
+    rm -rf html docsource && \
+    rm -rf p2/sub/*/test p3/sub/*/test && \
+    find . -name "*.c" -delete && \
+    find . -name "*.cc" -delete && \
+    find . -name "*.cpp" -delete && \
+    find . -name "*.h" -delete && \
+    find . -name "*.imake" -delete && \
+    find . -name "*.log" -delete && \
+    find . -name "test" -type d -exec rm -rf {} + 2>/dev/null || true && \
+    echo "✓ Cleaned $(du -sh /vicar/dev | cut -f1) remaining"
+
+# Download and extract VICAR external libraries
+RUN echo "Downloading VICAR external libraries..." && \
+    curl -L "https://github.com/NASA-AMMOS/VICAR/releases/download/${VICAR_VERSION}/${EXTERNAL_FILE}" -o vicar_ext.tar.gz && \
+    echo "Extracting VICAR external libraries..." && \
+    mkdir -p /vicar/external && \
+    tar -xzf vicar_ext.tar.gz && \
+    EXTRACTED_DIR=$(ls -d vicar_open_ext_* 2>/dev/null | head -1) && \
+    CONTENT_COUNT=$(find "$EXTRACTED_DIR" -maxdepth 1 -mindepth 1 | wc -l) && \
+    if [ "$CONTENT_COUNT" -eq 1 ]; then \
+        SUBDIR=$(find "$EXTRACTED_DIR" -maxdepth 1 -mindepth 1 -type d | head -1); \
+        if [ -n "$SUBDIR" ]; then \
+            cp -r "$SUBDIR"/* /vicar/external/; \
+        fi; \
+    else \
+        cp -r "$EXTRACTED_DIR"/* /vicar/external/; \
+    fi && \
+    echo "✓ External libraries extracted" && \
+    echo "Removing unnecessary files from external libraries..." && \
+    cd /vicar/external && \
+    find . -name "*.h" -delete && \
+    find . -name "*.hpp" -delete && \
+    find . -name "*.hxx" -delete && \
+    find . -name "*.c" -delete && \
+    find . -name "*.cc" -delete && \
+    find . -name "*.cpp" -delete && \
+    find . -name "*.cxx" -delete && \
+    find . -name "*.a" -delete && \
+    find . -name "*.cmake" -delete && \
+    find . -name "CMakeLists.txt" -delete && \
+    rm -rf */include */src */test */tests */examples */doc */docs && \
+    echo "✓ Cleaned $(du -sh /vicar/external | cut -f1) remaining"
+
+# ============================================================================
+# Stage 2: Runtime - Build final image with only necessary files
+# ============================================================================
 FROM oraclelinux:8
 
 LABEL org.opencontainers.image.title="Terrain Intelligence Generator"
-LABEL org.opencontainers.image.description="Open source distribution of VICAR-based terrain intelligence generation tools"
-LABEL org.opencontainers.image.version="5.0-opensource"
+LABEL org.opencontainers.image.description="Open source distribution of VICAR-based terrain intelligence generation tools (optimized)"
+LABEL org.opencontainers.image.version="5.0-opensource-optimized"
 LABEL org.opencontainers.image.source="https://github.com/NASA-AMMOS/VICAR"
 
 # Set VICAR environment
@@ -19,7 +100,8 @@ ENV LD_LIBRARY_PATH="${V2TOP}/olb/x86-64-linx:${V2TOP}/p2/lib/x86-64-linx:${V2TO
 
 # Enable PowerTools (CodeReady Builder) for additional packages
 RUN dnf install -y dnf-plugins-core && \
-    dnf config-manager --enable ol8_codeready_builder
+    dnf config-manager --enable ol8_codeready_builder && \
+    dnf clean all
 
 # Install runtime dependencies
 RUN dnf -y --nogpgcheck --setopt=install_weak_deps=False --setopt=tsflags=nodocs install \
@@ -39,10 +121,11 @@ RUN dnf -y --nogpgcheck --setopt=install_weak_deps=False --setopt=tsflags=nodocs
     xauth \
     # Motif runtime
     motif \
-    # Java runtime (Java 11 headless for vicario.jar - using headless mode)
+    # Java runtime (Java 11 headless for vicario.jar)
     java-11-openjdk-headless \
     # Python runtime
     python39 \
+    python39-pip \
     # Image processing runtime libraries
     libtiff \
     libpng \
@@ -59,9 +142,6 @@ RUN dnf -y --nogpgcheck --setopt=install_weak_deps=False --setopt=tsflags=nodocs
     less \
     which \
     findutils \
-    curl \
-    tar \
-    gzip \
     && dnf clean all \
     && rm -rf /var/cache/dnf /var/cache/yum
 
@@ -76,217 +156,14 @@ RUN rm -f /bin/csh && ln -s /bin/tcsh /bin/csh
 # Create VICAR directory structure
 RUN mkdir -p ${WORKSPACE}/dev ${WORKSPACE}/build/{java,html/{bin,xsl}}
 
-# Download and extract pre-built VICAR binaries from GitHub releases
-ARG VICAR_VERSION=5.0
-ARG BINARIES_FILE=vicar_open_bin_x86-64-linx_5.0.tar.gz
-ARG EXTERNAL_FILE=vicar_open_ext_x86-64-linx_5.0.tar.gz
-
-WORKDIR /tmp
-
-# Download and extract VICAR binaries
-RUN echo "Downloading and extracting VICAR binaries..." && \
-    curl -L "https://github.com/NASA-AMMOS/VICAR/releases/download/${VICAR_VERSION}/${BINARIES_FILE}" | tar -zxf - && \
-    EXTRACTED_DIR=$(ls -d vicar_open_bin_* 2>/dev/null | head -1) && \
-    if [ -n "$EXTRACTED_DIR" ] && [ -d "$EXTRACTED_DIR" ]; then \
-        echo "Found extracted directory: $EXTRACTED_DIR"; \
-        # Check if there's a nested vicar_open_5.0 directory inside the bin directory
-        if [ -d "$EXTRACTED_DIR/vicar_open_5.0" ]; then \
-            echo "Found nested VICAR directory: $EXTRACTED_DIR/vicar_open_5.0"; \
-            echo "Flattening structure - moving contents directly to ${WORKSPACE}/dev/"; \
-            cp -r "$EXTRACTED_DIR/vicar_open_5.0"/* ${WORKSPACE}/dev/ && \
-            echo "✓ VICAR binaries installed (flattened from nested structure)"; \
-        else \
-            echo "Moving $EXTRACTED_DIR contents to ${WORKSPACE}/dev/"; \
-            cp -r "$EXTRACTED_DIR"/* ${WORKSPACE}/dev/ && \
-            echo "✓ VICAR binaries installed"; \
-        fi && \
-        rm -rf "$EXTRACTED_DIR"; \
-    else \
-        echo "ERROR: Could not find extracted binaries directory" && exit 1; \
-    fi && \
-    echo "Verifying flattened structure..." && \
-    ls -la ${WORKSPACE}/dev/ && \
-    if [ -d "${WORKSPACE}/dev/p2" ] && [ -d "${WORKSPACE}/dev/tae53" ]; then \
-        echo "✓ Structure verification passed - p2 and tae53 directories found directly under dev/"; \
-    else \
-        echo "ERROR: Expected directories not found. Directory structure:"; \
-        find ${WORKSPACE}/dev -maxdepth 2 -type d; \
-        exit 1; \
-    fi
-
-# Download and extract VICAR external libraries
-RUN echo "Downloading and extracting VICAR external libraries..." && \
-    curl -L "https://github.com/NASA-AMMOS/VICAR/releases/download/${VICAR_VERSION}/${EXTERNAL_FILE}" | tar -zxf - && \
-    EXTRACTED_DIR=$(ls -d vicar_open_ext_* 2>/dev/null | head -1) && \
-    if [ -n "$EXTRACTED_DIR" ] && [ -d "$EXTRACTED_DIR" ]; then \
-        echo "Found extracted directory: $EXTRACTED_DIR"; \
-        # Check if there's content to flatten
-        CONTENT_COUNT=$(find "$EXTRACTED_DIR" -maxdepth 1 -mindepth 1 | wc -l); \
-        if [ "$CONTENT_COUNT" -eq 1 ]; then \
-            # Single subdirectory - flatten it
-            SUBDIR=$(find "$EXTRACTED_DIR" -maxdepth 1 -mindepth 1 -type d | head -1); \
-            if [ -n "$SUBDIR" ]; then \
-                echo "Flattening external libraries from nested structure"; \
-                mkdir -p ${WORKSPACE}/external && \
-                cp -r "$SUBDIR"/* ${WORKSPACE}/external/ && \
-                echo "✓ External libraries installed (flattened)"; \
-            else \
-                mkdir -p ${WORKSPACE}/external && \
-                cp -r "$EXTRACTED_DIR"/* ${WORKSPACE}/external/ && \
-                echo "✓ External libraries installed"; \
-            fi; \
-        else \
-            echo "Moving $EXTRACTED_DIR contents to ${WORKSPACE}/external/"; \
-            mkdir -p ${WORKSPACE}/external && \
-            cp -r "$EXTRACTED_DIR"/* ${WORKSPACE}/external/ && \
-            echo "✓ External libraries installed"; \
-        fi && \
-        rm -rf "$EXTRACTED_DIR"; \
-    else \
-        echo "ERROR: Could not find extracted externals directory" && exit 1; \
-    fi
-
-# Note: VISOR calibration and sample data should be mounted at runtime via:
-# -v /path/to/visor_calibration:/usr/local/vicar/visor_calib:ro
-# -v /path/to/visor_samples:/usr/local/vicar/visor_samples:ro
-# 
-# Download instructions available at:
-# https://github.com/NASA-AMMOS/VICAR/releases/tag/5.0
-# - visor_calibration_20230608_phx.tar.gz (Phoenix)
-# - visor_calibration_20230608_mer.tar.gz (MER)
-# - visor_sample_data_20230623.tar.gz (Sample stereo data)
-
-# Note: MARS calibration files should be mounted at runtime via:
-# -v /path/to/calibration:/usr/local/vicar/mars_calib:ro
-# and set MARS_CONFIG_PATH=/usr/local/vicar/mars_calib
-
-WORKDIR /workspace
-
-# Create symbolic links for common VICAR commands in /usr/local/bin
-# Updated 2026-05-06: Fixed exit code handling (VICAR returns 1 on success)
-RUN ARCH_DIR="x86-64-linx" && \
-    TAE_ARCH_DIR="x86_64_linx" && \
-    echo "Creating wrapper scripts for VICAR commands..." && \
-    echo "V2TOP=${V2TOP}" && \
-    echo "Checking for directories:" && \
-    ls -la ${V2TOP}/ && \
-    # Build comprehensive library path
-    VICAR_LIB_PATH="${V2TOP}/olb/$ARCH_DIR:${V2TOP}/mars/lib/$ARCH_DIR" && \
-    for extlib in ${WORKSPACE}/external/*/v*/$ARCH_DIR/lib ${WORKSPACE}/external/*/v*/$ARCH_DIR/lib64 ${WORKSPACE}/external/*/v*/$ARCH_DIR; do \
-        if [ -d "$extlib" ]; then \
-            VICAR_LIB_PATH="$VICAR_LIB_PATH:$extlib"; \
-        fi; \
-    done && \
-    echo "Built library path with $(echo $VICAR_LIB_PATH | tr ':' '\n' | wc -l) directories" && \
-    # Create wrappers for VICAR p2 programs
-    if [ -d "${V2TOP}/p2/lib/$ARCH_DIR" ]; then \
-        echo "Found p2 directory: ${V2TOP}/p2/lib/$ARCH_DIR"; \
-        WRAPPER_COUNT=0; \
-        for cmd in ${V2TOP}/p2/lib/$ARCH_DIR/*; do \
-            if [ -f "$cmd" ] && [ -x "$cmd" ]; then \
-                cmdname=$(basename "$cmd"); \
-                if [[ ! "$cmdname" =~ \. ]]; then \
-                    echo "#!/bin/bash" > /usr/local/bin/$cmdname; \
-                    echo "export V2TOP=${V2TOP}" >> /usr/local/bin/$cmdname; \
-                    echo "export WORKSPACE=${WORKSPACE}" >> /usr/local/bin/$cmdname; \
-                    echo "export VICSYS=DEVELOPMENT" >> /usr/local/bin/$cmdname; \
-                    echo "export LD_LIBRARY_PATH=$VICAR_LIB_PATH:\$LD_LIBRARY_PATH" >> /usr/local/bin/$cmdname; \
-                    echo "export PATH=${V2TOP}/p2/lib/$ARCH_DIR:${V2TOP}/tae53/bin/$TAE_ARCH_DIR:\$PATH" >> /usr/local/bin/$cmdname; \
-                    echo "$cmd \"\$@\"" >> /usr/local/bin/$cmdname; \
-                    echo "exit_code=\$?" >> /usr/local/bin/$cmdname; \
-                    echo "# VICAR commands often return non-zero on success, treat 0-2 as success" >> /usr/local/bin/$cmdname; \
-                    echo "if [ \$exit_code -le 2 ]; then exit 0; else exit \$exit_code; fi" >> /usr/local/bin/$cmdname; \
-                    chmod +x /usr/local/bin/$cmdname; \
-                    WRAPPER_COUNT=$((WRAPPER_COUNT + 1)); \
-                fi; \
-            fi; \
-        done; \
-        echo "✓ Created $WRAPPER_COUNT wrappers for VICAR p2 commands"; \
-    else \
-        echo "⚠ p2 directory not found at ${V2TOP}/p2/lib/$ARCH_DIR"; \
-    fi && \
-    # Create wrappers for TAE binaries
-    if [ -d "${V2TOP}/tae53/bin/$TAE_ARCH_DIR" ]; then \
-        TAE_COUNT=0; \
-        for cmd in ${V2TOP}/tae53/bin/$TAE_ARCH_DIR/*; do \
-            if [ -f "$cmd" ] && [ -x "$cmd" ]; then \
-                cmdname=$(basename "$cmd"); \
-                if [ ! -f "/usr/local/bin/$cmdname" ]; then \
-                    echo "#!/bin/bash" > /usr/local/bin/$cmdname; \
-                    echo "export V2TOP=${V2TOP}" >> /usr/local/bin/$cmdname; \
-                    echo "export WORKSPACE=${WORKSPACE}" >> /usr/local/bin/$cmdname; \
-                    echo "export VICSYS=DEVELOPMENT" >> /usr/local/bin/$cmdname; \
-                    echo "export LD_LIBRARY_PATH=$VICAR_LIB_PATH:\$LD_LIBRARY_PATH" >> /usr/local/bin/$cmdname; \
-                    echo "export PATH=${V2TOP}/tae53/bin/$TAE_ARCH_DIR:${V2TOP}/tae53/bin/all:\$PATH" >> /usr/local/bin/$cmdname; \
-                    echo "$cmd \"\$@\"" >> /usr/local/bin/$cmdname; \
-                    echo "exit_code=\$?" >> /usr/local/bin/$cmdname; \
-                    echo "# VICAR commands often return non-zero on success, treat 0-2 as success" >> /usr/local/bin/$cmdname; \
-                    echo "if [ \$exit_code -le 2 ]; then exit 0; else exit \$exit_code; fi" >> /usr/local/bin/$cmdname; \
-                    chmod +x /usr/local/bin/$cmdname; \
-                    TAE_COUNT=$((TAE_COUNT + 1)); \
-                fi; \
-            fi; \
-        done; \
-        echo "✓ Created $TAE_COUNT wrappers for TAE commands"; \
-    else \
-        echo "⚠ TAE directory not found at ${V2TOP}/tae53/bin/$TAE_ARCH_DIR"; \
-    fi && \
-    # Create wrappers for MARS binaries
-    if [ -d "${V2TOP}/mars/lib/$ARCH_DIR" ]; then \
-        MARS_COUNT=0; \
-        for cmd in ${V2TOP}/mars/lib/$ARCH_DIR/*; do \
-            if [ -f "$cmd" ] && [ -x "$cmd" ]; then \
-                cmdname=$(basename "$cmd"); \
-                if [[ ! "$cmdname" =~ \. ]] && [ ! -f "/usr/local/bin/$cmdname" ]; then \
-                    echo "#!/bin/bash" > /usr/local/bin/$cmdname; \
-                    echo "export V2TOP=${V2TOP}" >> /usr/local/bin/$cmdname; \
-                    echo "export WORKSPACE=${WORKSPACE}" >> /usr/local/bin/$cmdname; \
-                    echo "export VICSYS=DEVELOPMENT" >> /usr/local/bin/$cmdname; \
-                    echo "export LD_LIBRARY_PATH=$VICAR_LIB_PATH:\$LD_LIBRARY_PATH" >> /usr/local/bin/$cmdname; \
-                    echo "export PATH=${V2TOP}/mars/lib/$ARCH_DIR:${V2TOP}/p2/lib/$ARCH_DIR:\$PATH" >> /usr/local/bin/$cmdname; \
-                    echo "$cmd \"\$@\"" >> /usr/local/bin/$cmdname; \
-                    echo "exit_code=\$?" >> /usr/local/bin/$cmdname; \
-                    echo "# VICAR commands often return non-zero on success, treat 0-2 as success" >> /usr/local/bin/$cmdname; \
-                    echo "if [ \$exit_code -le 2 ]; then exit 0; else exit \$exit_code; fi" >> /usr/local/bin/$cmdname; \
-                    chmod +x /usr/local/bin/$cmdname; \
-                    MARS_COUNT=$((MARS_COUNT + 1)); \
-                fi; \
-            fi; \
-        done; \
-        echo "✓ Created $MARS_COUNT wrappers for MARS commands"; \
-    else \
-        echo "⚠ MARS directory not found at ${V2TOP}/mars/lib/$ARCH_DIR"; \
-    fi && \
-    echo "Wrapper creation complete"
-
-# Set up VICAR environment for profile scripts
-RUN ARCH_DIR="x86-64-linx" && \
-    VICAR_LIB_PATH="${V2TOP}/olb/$ARCH_DIR:${V2TOP}/mars/lib/$ARCH_DIR" && \
-    for extlib in ${WORKSPACE}/external/*/v*/$ARCH_DIR/lib ${WORKSPACE}/external/*/v*/$ARCH_DIR/lib64 ${WORKSPACE}/external/*/v*/$ARCH_DIR; do \
-        if [ -d "$extlib" ]; then \
-            VICAR_LIB_PATH="$VICAR_LIB_PATH:$extlib"; \
-        fi; \
-    done && \
-    echo "export V2TOP=${V2TOP}" > /etc/profile.d/vicar.sh && \
-    echo "export WORKSPACE=${WORKSPACE}" >> /etc/profile.d/vicar.sh && \
-    echo "export VICSYS=DEVELOPMENT" >> /etc/profile.d/vicar.sh && \
-    echo "export LD_LIBRARY_PATH=$VICAR_LIB_PATH:\$LD_LIBRARY_PATH" >> /etc/profile.d/vicar.sh && \
-    echo "export PATH=${V2TOP}/tae53/bin:${V2TOP}/bin:\$PATH" >> /etc/profile.d/vicar.sh && \
-    chmod +x /etc/profile.d/vicar.sh
-
-# Install Python pip for additional tools
-RUN dnf install -y python39-pip && \
-    dnf clean all && \
-    rm -rf /var/cache/dnf /var/cache/yum
+# Copy VICAR files from builder stage (this is the key optimization!)
+COPY --from=builder /vicar/dev ${WORKSPACE}/dev
+COPY --from=builder /vicar/external ${WORKSPACE}/external
 
 # Copy Java vicario JAR and create wrapper script
-# Note: vicario.jar must be obtained separately
-# See VICARIO.md for build instructions from https://github.com/NASA-AMMOS/vicario
-# Build with: mvn -U -Pshade clean install
-# Then copy target/vicario-*-FAT.jar to this directory as vicario.jar
 COPY --chown=root:root vicario.jar /usr/local/bin/vicario.jar
 
-# Create vicario wrapper script that uses Java headless mode
+# Create vicario wrapper script that uses Java in headless mode
 RUN echo '#!/bin/bash' > /usr/local/bin/vicario && \
     echo '# vicario wrapper - calls Java vicario in headless mode (no X11 required)' >> /usr/local/bin/vicario && \
     echo 'VICARIO_JAR="/usr/local/bin/vicario.jar"' >> /usr/local/bin/vicario && \
@@ -321,15 +198,113 @@ RUN echo '#!/bin/bash' > /usr/local/bin/vicario && \
     echo 'exit $EXIT_CODE' >> /usr/local/bin/vicario && \
     chmod +x /usr/local/bin/vicario
 
+WORKDIR /workspace
+
+# Create symbolic links for common VICAR commands in /usr/local/bin
+RUN ARCH_DIR="x86-64-linx" && \
+    TAE_ARCH_DIR="x86_64_linx" && \
+    echo "Creating wrapper scripts for VICAR commands..." && \
+    # Build comprehensive library path
+    VICAR_LIB_PATH="${V2TOP}/olb/$ARCH_DIR:${V2TOP}/mars/lib/$ARCH_DIR" && \
+    for extlib in ${WORKSPACE}/external/*/v*/$ARCH_DIR/lib ${WORKSPACE}/external/*/v*/$ARCH_DIR/lib64 ${WORKSPACE}/external/*/v*/$ARCH_DIR; do \
+        if [ -d "$extlib" ]; then \
+            VICAR_LIB_PATH="$VICAR_LIB_PATH:$extlib"; \
+        fi; \
+    done && \
+    # Create wrappers for VICAR p2 programs
+    if [ -d "${V2TOP}/p2/lib/$ARCH_DIR" ]; then \
+        WRAPPER_COUNT=0; \
+        for cmd in ${V2TOP}/p2/lib/$ARCH_DIR/*; do \
+            if [ -f "$cmd" ] && [ -x "$cmd" ]; then \
+                cmdname=$(basename "$cmd"); \
+                if [[ ! "$cmdname" =~ \. ]]; then \
+                    echo "#!/bin/bash" > /usr/local/bin/$cmdname; \
+                    echo "export V2TOP=${V2TOP}" >> /usr/local/bin/$cmdname; \
+                    echo "export WORKSPACE=${WORKSPACE}" >> /usr/local/bin/$cmdname; \
+                    echo "export VICSYS=DEVELOPMENT" >> /usr/local/bin/$cmdname; \
+                    echo "export LD_LIBRARY_PATH=$VICAR_LIB_PATH:\$LD_LIBRARY_PATH" >> /usr/local/bin/$cmdname; \
+                    echo "export PATH=${V2TOP}/p2/lib/$ARCH_DIR:${V2TOP}/tae53/bin/$TAE_ARCH_DIR:\$PATH" >> /usr/local/bin/$cmdname; \
+                    echo "$cmd \"\$@\"" >> /usr/local/bin/$cmdname; \
+                    echo "exit_code=\$?" >> /usr/local/bin/$cmdname; \
+                    echo "# VICAR commands often return non-zero on success, treat 0-2 as success" >> /usr/local/bin/$cmdname; \
+                    echo "if [ \$exit_code -le 2 ]; then exit 0; else exit \$exit_code; fi" >> /usr/local/bin/$cmdname; \
+                    chmod +x /usr/local/bin/$cmdname; \
+                    WRAPPER_COUNT=$((WRAPPER_COUNT + 1)); \
+                fi; \
+            fi; \
+        done; \
+        echo "✓ Created $WRAPPER_COUNT wrappers for VICAR p2 commands"; \
+    fi && \
+    # Create wrappers for TAE binaries
+    if [ -d "${V2TOP}/tae53/bin/$TAE_ARCH_DIR" ]; then \
+        TAE_COUNT=0; \
+        for cmd in ${V2TOP}/tae53/bin/$TAE_ARCH_DIR/*; do \
+            if [ -f "$cmd" ] && [ -x "$cmd" ]; then \
+                cmdname=$(basename "$cmd"); \
+                if [ ! -f "/usr/local/bin/$cmdname" ]; then \
+                    echo "#!/bin/bash" > /usr/local/bin/$cmdname; \
+                    echo "export V2TOP=${V2TOP}" >> /usr/local/bin/$cmdname; \
+                    echo "export WORKSPACE=${WORKSPACE}" >> /usr/local/bin/$cmdname; \
+                    echo "export VICSYS=DEVELOPMENT" >> /usr/local/bin/$cmdname; \
+                    echo "export LD_LIBRARY_PATH=$VICAR_LIB_PATH:\$LD_LIBRARY_PATH" >> /usr/local/bin/$cmdname; \
+                    echo "export PATH=${V2TOP}/tae53/bin/$TAE_ARCH_DIR:${V2TOP}/tae53/bin/all:\$PATH" >> /usr/local/bin/$cmdname; \
+                    echo "$cmd \"\$@\"" >> /usr/local/bin/$cmdname; \
+                    echo "exit_code=\$?" >> /usr/local/bin/$cmdname; \
+                    echo "# VICAR commands often return non-zero on success, treat 0-2 as success" >> /usr/local/bin/$cmdname; \
+                    echo "if [ \$exit_code -le 2 ]; then exit 0; else exit \$exit_code; fi" >> /usr/local/bin/$cmdname; \
+                    chmod +x /usr/local/bin/$cmdname; \
+                    TAE_COUNT=$((TAE_COUNT + 1)); \
+                fi; \
+            fi; \
+        done; \
+        echo "✓ Created $TAE_COUNT wrappers for TAE commands"; \
+    fi && \
+    # Create wrappers for MARS binaries
+    if [ -d "${V2TOP}/mars/lib/$ARCH_DIR" ]; then \
+        MARS_COUNT=0; \
+        for cmd in ${V2TOP}/mars/lib/$ARCH_DIR/*; do \
+            if [ -f "$cmd" ] && [ -x "$cmd" ]; then \
+                cmdname=$(basename "$cmd"); \
+                if [[ ! "$cmdname" =~ \. ]] && [ ! -f "/usr/local/bin/$cmdname" ]; then \
+                    echo "#!/bin/bash" > /usr/local/bin/$cmdname; \
+                    echo "export V2TOP=${V2TOP}" >> /usr/local/bin/$cmdname; \
+                    echo "export WORKSPACE=${WORKSPACE}" >> /usr/local/bin/$cmdname; \
+                    echo "export VICSYS=DEVELOPMENT" >> /usr/local/bin/$cmdname; \
+                    echo "export LD_LIBRARY_PATH=$VICAR_LIB_PATH:\$LD_LIBRARY_PATH" >> /usr/local/bin/$cmdname; \
+                    echo "export PATH=${V2TOP}/mars/lib/$ARCH_DIR:${V2TOP}/p2/lib/$ARCH_DIR:\$PATH" >> /usr/local/bin/$cmdname; \
+                    echo "$cmd \"\$@\"" >> /usr/local/bin/$cmdname; \
+                    echo "exit_code=\$?" >> /usr/local/bin/$cmdname; \
+                    echo "# VICAR commands often return non-zero on success, treat 0-2 as success" >> /usr/local/bin/$cmdname; \
+                    echo "if [ \$exit_code -le 2 ]; then exit 0; else exit \$exit_code; fi" >> /usr/local/bin/$cmdname; \
+                    chmod +x /usr/local/bin/$cmdname; \
+                    MARS_COUNT=$((MARS_COUNT + 1)); \
+                fi; \
+            fi; \
+        done; \
+        echo "✓ Created $MARS_COUNT wrappers for MARS commands"; \
+    fi
+
+# Set up VICAR environment for profile scripts
+RUN ARCH_DIR="x86-64-linx" && \
+    VICAR_LIB_PATH="${V2TOP}/olb/$ARCH_DIR:${V2TOP}/mars/lib/$ARCH_DIR" && \
+    for extlib in ${WORKSPACE}/external/*/v*/$ARCH_DIR/lib ${WORKSPACE}/external/*/v*/$ARCH_DIR/lib64 ${WORKSPACE}/external/*/v*/$ARCH_DIR; do \
+        if [ -d "$extlib" ]; then \
+            VICAR_LIB_PATH="$VICAR_LIB_PATH:$extlib"; \
+        fi; \
+    done && \
+    echo "export V2TOP=${V2TOP}" > /etc/profile.d/vicar.sh && \
+    echo "export WORKSPACE=${WORKSPACE}" >> /etc/profile.d/vicar.sh && \
+    echo "export VICSYS=DEVELOPMENT" >> /etc/profile.d/vicar.sh && \
+    echo "export LD_LIBRARY_PATH=$VICAR_LIB_PATH:\$LD_LIBRARY_PATH" >> /etc/profile.d/vicar.sh && \
+    echo "export PATH=${V2TOP}/tae53/bin:${V2TOP}/bin:\$PATH" >> /etc/profile.d/vicar.sh && \
+    chmod +x /etc/profile.d/vicar.sh
+
 # Verify VICAR installation
 RUN echo "===== VICAR Installation Verification =====" && \
     echo "V2TOP: ${V2TOP}" && \
     echo "" && \
     if [ -d "${V2TOP}" ]; then \
         echo "✓ Found VICAR at ${V2TOP}"; \
-        echo "Contents:"; \
-        ls -la ${V2TOP}/ | head -20; \
-        echo ""; \
         if [ -d "${V2TOP}/tae53/bin" ]; then \
             TAE_COUNT=$(find ${V2TOP}/tae53/bin -type f -executable 2>/dev/null | wc -l); \
             echo "✓ TAE binaries: $TAE_COUNT programs"; \
@@ -356,9 +331,6 @@ RUN echo '#!/bin/bash' > /usr/local/bin/docker-entrypoint.sh && \
     echo 'exec "$@"' >> /usr/local/bin/docker-entrypoint.sh && \
     chmod +x /usr/local/bin/docker-entrypoint.sh
 
-# Set working directory
-WORKDIR /workspace
-
 # Set entrypoint
 ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
 
@@ -366,6 +338,7 @@ ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
 RUN echo "===== Terrain Intelligence Generator Installation Complete =====" && \
     echo "V2TOP: ${V2TOP}" && \
     echo "Source: Pre-built binaries from https://github.com/NASA-AMMOS/VICAR/releases" && \
+    echo "Build: Optimized multi-stage build (reduced from ~8GB to ~2GB)" && \
     echo "" && \
     echo "Available wrappers in /usr/local/bin: $(ls -1 /usr/local/bin | wc -l)" && \
     echo "" && \
