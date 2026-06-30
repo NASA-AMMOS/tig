@@ -8,7 +8,7 @@ Make ~200 VICAR CLI programs living inside a Docker container feel like native c
 
 This toolkit provides multiple ways to run VICAR:
 
-- **Open Source Build** (Recommended for public use) - Builds VICAR from the public GitHub repository. See [OPENSOURCE-BUILD.md](OPENSOURCE-BUILD.md) for details.
+- **Open Source Build** (Recommended for public use) - Builds VICAR from the public GitHub repository. See [OPENSOURCE-BUILD.md](docs/OPENSOURCE-BUILD.md) for details.
 - **Pre-built RPMs** (JPL Internal) - Uses pre-built RPM packages from JPL Artifactory
 - **Local Binaries** - Uses locally compiled VICAR binaries
 
@@ -279,7 +279,7 @@ toolkit-restart       # Restart container with new settings
 
 ### Available Configuration Options
 
-See [CONFIGURATION.md](CONFIGURATION.md) for detailed options including:
+See [CONFIGURATION.md](docs/CONFIGURATION.md) for detailed options including:
 - Custom container images
 - Workspace location
 - Additional volume mounts
@@ -302,7 +302,7 @@ toolkit-restart
 toolkit-verify-calib
 ```
 
-See [MOUNTING-DATA.md](MOUNTING-DATA.md) for detailed configuration options.
+See [MOUNTING-DATA.md](docs/MOUNTING-DATA.md) for detailed configuration options.
 
 ## Building VICAR from Source
 

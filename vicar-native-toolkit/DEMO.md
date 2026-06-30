@@ -87,18 +87,27 @@ GEN task completed
 
 ### 3. Run Mesh Generation
 
-Run the full stereo pipeline to generate a 3D terrain mesh:
+Choose one:
+
+#### Option A: Pre-computed XYZ (Fast ~90 seconds)
 
 ```bash
-cd vicar-native-toolkit
+# From repository root
+./demo-mesh-native-toolkit.sh \
+  --xyz /path/to/pointcloud.xyz \
+  --texture /path/to/image.IMG
+```
+
+#### Option B: Full Stereo Pipeline (Slow ~10-15 minutes)
+
+```bash
+# From repository root
 ./demo-mesh-native-toolkit.sh \
   --stereo-left /path/to/left.VIC \
   --stereo-right /path/to/right.VIC
 ```
 
-**Time:** ~10-15 minutes
-
-**Requirements:**
+**Requirements for stereo processing:**
 - MARS calibration files (automatically detected)
 - Matching stereo pair (same SCLK timestamp)
 
@@ -553,7 +562,29 @@ vicar-native-toolkit/workspace/    →    /workspace
 
 ## Example Workflows
 
-### Workflow 1: Full Pipeline from Stereo Pair
+### Workflow 1: Quick Test with Pre-computed XYZ
+
+```bash
+cd vicar-native-toolkit
+direnv allow
+cd workspace
+
+# Copy existing XYZ and texture
+cp /data/mars/pointcloud.xyz .
+cp /data/mars/texture_image.vic texture.vic
+
+# Generate mesh (fast!)
+marsmesh inp=pointcloud.xyz out=terrain.obj \
+  in_skin=texture.vic \
+  x_subsample=2 y_subsample=2  # Downsample for speed
+
+# View
+meshlab terrain.obj
+```
+
+**Time:** ~30 seconds
+
+### Workflow 2: Full Pipeline from Stereo Pair
 
 ```bash
 cd vicar-native-toolkit/workspace
@@ -576,7 +607,7 @@ blender terrain.obj
 
 **Time:** ~15-20 minutes
 
-### Workflow 2: Batch Processing Multiple Pairs
+### Workflow 3: Batch Processing Multiple Pairs
 
 ```bash
 cd vicar-native-toolkit/workspace
@@ -635,9 +666,9 @@ echo $PATH
 ## Next Steps
 
 - **[Full Toolkit README](README.md)** - Complete documentation
-- **[Configuration Guide](CONFIGURATION.md)** - Advanced setup options
-- **[Mounting Data](MOUNTING-DATA.md)** - Volume mount configuration
-- **[Open Source Build](OPENSOURCE-BUILD.md)** - Build from source
+- **[Configuration Guide](docs/CONFIGURATION.md)** - Advanced setup options
+- **[Mounting Data](docs/MOUNTING-DATA.md)** - Volume mount configuration
+- **[Open Source Build](docs/OPENSOURCE-BUILD.md)** - Build from source
 
 ## Key Takeaways
 

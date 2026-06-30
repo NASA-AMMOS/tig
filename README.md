@@ -77,7 +77,7 @@ Docker environment with VICAR tools wrapped for native-like CLI usage. Features:
 - 📊 **MARS calibration mounting** for terrain processing
 
 📁 `vicar-native-toolkit/`  
-📖 [Toolkit README](vicar-native-toolkit/README.md) | [Quick Reference](vicar-native-toolkit/QUICKREF.md)
+📖 [Toolkit README](vicar-native-toolkit/README.md) | [Quick Reference](vicar-native-toolkit/docs/QUICKREF.md)
 
 ### Terrain Intelligence Generator
 Pre-built demos and M2020 calibration for mesh generation.
