@@ -47,3 +47,4 @@ demo-run.log
 
 # Docker
 .dockerignore
+docs/superpowers/
