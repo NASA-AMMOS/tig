@@ -39,7 +39,7 @@ RUN dnf -y --nogpgcheck --setopt=install_weak_deps=False --setopt=tsflags=nodocs
     xauth \
     # Motif runtime
     motif \
-    # Java runtime (Java 11 for vicario.jar compatibility)
+    # Java runtime (Java 11 headless for vicario.jar - using headless mode)
     java-11-openjdk-headless \
     # Python runtime
     python39 \
@@ -286,10 +286,15 @@ RUN dnf install -y python39-pip && \
 # Then copy target/vicario-*-FAT.jar to this directory as vicario.jar
 COPY --chown=root:root vicario.jar /usr/local/bin/vicario.jar
 
-# Create vicario wrapper script that uses Java version with proper rescaling
+# Create vicario wrapper script that uses Java headless mode
 RUN echo '#!/bin/bash' > /usr/local/bin/vicario && \
-    echo '# vicario wrapper - calls Java vicario with proper parameters' >> /usr/local/bin/vicario && \
+    echo '# vicario wrapper - calls Java vicario in headless mode (no X11 required)' >> /usr/local/bin/vicario && \
     echo 'VICARIO_JAR="/usr/local/bin/vicario.jar"' >> /usr/local/bin/vicario && \
+    echo '' >> /usr/local/bin/vicario && \
+    echo '# Temporary files for filtering output' >> /usr/local/bin/vicario && \
+    echo 'TMPOUT=$(mktemp)' >> /usr/local/bin/vicario && \
+    echo 'TMPERR=$(mktemp)' >> /usr/local/bin/vicario && \
+    echo 'trap "rm -f $TMPOUT $TMPERR" EXIT' >> /usr/local/bin/vicario && \
     echo '' >> /usr/local/bin/vicario && \
     echo '# Parse simple input/output format' >> /usr/local/bin/vicario && \
     echo 'if [ $# -eq 2 ]; then' >> /usr/local/bin/vicario && \
@@ -298,12 +303,22 @@ RUN echo '#!/bin/bash' > /usr/local/bin/vicario && \
     echo '    # Auto-detect format from extension' >> /usr/local/bin/vicario && \
     echo '    EXT="${OUT##*.}"' >> /usr/local/bin/vicario && \
     echo '    FORMAT=$(echo "$EXT" | tr '"'"'[:upper:]'"'"' '"'"'[:lower:]'"'"')' >> /usr/local/bin/vicario && \
-    echo '    # Run Java vicario with rescale for proper display' >> /usr/local/bin/vicario && \
-    echo '    java -jar "$VICARIO_JAR" inp="$INP" out="$OUT" format="$FORMAT" oform=byte rescale=true' >> /usr/local/bin/vicario && \
+    echo '    # Run Java vicario in headless mode' >> /usr/local/bin/vicario && \
+    echo '    java -Djava.awt.headless=true -jar "$VICARIO_JAR" inp="$INP" out="$OUT" format="$FORMAT" oform=byte rescale=true > $TMPOUT 2> $TMPERR' >> /usr/local/bin/vicario && \
     echo 'else' >> /usr/local/bin/vicario && \
     echo '    # Pass through all arguments as-is' >> /usr/local/bin/vicario && \
-    echo '    java -jar "$VICARIO_JAR" "$@"' >> /usr/local/bin/vicario && \
+    echo '    java -Djava.awt.headless=true -jar "$VICARIO_JAR" "$@" > $TMPOUT 2> $TMPERR' >> /usr/local/bin/vicario && \
     echo 'fi' >> /usr/local/bin/vicario && \
+    echo '' >> /usr/local/bin/vicario && \
+    echo 'EXIT_CODE=$?' >> /usr/local/bin/vicario && \
+    echo '' >> /usr/local/bin/vicario && \
+    echo '# Filter stderr - suppress mediaLib/mlib warnings and stack traces' >> /usr/local/bin/vicario && \
+    echo 'sed "/mediaLib\|mlib\|MediaLib/d; /^\tat /d; /^Caused by:/d; /^Occurs in:/d; /^\.\.\. [0-9]* more$/d" $TMPERR >&2' >> /usr/local/bin/vicario && \
+    echo '' >> /usr/local/bin/vicario && \
+    echo '# Output stdout' >> /usr/local/bin/vicario && \
+    echo 'cat $TMPOUT' >> /usr/local/bin/vicario && \
+    echo '' >> /usr/local/bin/vicario && \
+    echo 'exit $EXIT_CODE' >> /usr/local/bin/vicario && \
     chmod +x /usr/local/bin/vicario
 
 # Verify VICAR installation

@@ -1,6 +1,6 @@
 # VICAR Native Toolkit Walkthrough - Complete Setup for TIG Demo
 
-**Goal:** Set up vicar-native-toolkit to work with the M20-G87 VICAR build for native-like command execution in the TIG demo.
+**Goal:** Set up vicar-native-toolkit to work with the terrain-intelligence-generator:opensource image for native-like command execution in the TIG demo.
 
 **Time:** ~15-20 minutes (mostly building Docker images)
 
@@ -38,61 +38,70 @@ source ~/.zshrc  # or source ~/.bashrc
 ## Step 1: Navigate to Project
 
 ```bash
-cd /Users/han/IdeaProjects/MIPL/vicar/vicar-native-toolkit
+cd vicar-native-toolkit
 ```
 
 **Verify location:**
 ```bash
 pwd
 ls -la
-# Should show: .envrc, docker/, scripts/, workspace/, etc.
+# Should show: .envrc, workspace/, DEMO.md, README.md, etc.
 ```
 
 ---
 
 ## Step 2: Build the TIG Demo Docker Image
 
-The TIG demo image extends the base VICAR image with Java vicario for image format conversion.
+The TIG demo uses the opensource terrain-intelligence-generator image with VICAR v5.0.
 
 ```bash
-# Build the TIG demo image
-./scripts/build-tig-demo-image.sh
+# Navigate to the docker directory
+cd ../terrain-intelligence-generator/docker
+
+# Build the opensource image
+docker build --platform linux/amd64 -t terrain-intelligence-generator:opensource .
+
+# Return to toolkit directory
+cd ../../vicar-native-toolkit
 ```
 
 **Expected output:**
 ```
 ✅ Build successful!
-Image created: vicar-tools:tig-demo
-Size: ~1.36GB
+Image created: terrain-intelligence-generator:opensource
+Size: ~1.85GB
 ```
 
 **Time:** ~3-5 minutes
 
 **Verify image built:**
 ```bash
-docker images | grep vicar-tools:tig-demo
+docker images | grep terrain-intelligence-generator:opensource
 ```
 
 Should show:
 ```
-vicar-tools:tig-demo    latest    <image-id>    1.36GB
+terrain-intelligence-generator:opensource    latest    <image-id>    1.85GB
 ```
 
 ---
 
 ## Step 3: Review Configuration (Optional)
 
-The toolkit comes with a default configuration for the TIG demo image. Review it:
+The toolkit comes with a default configuration. You can create a local config:
 
 ```bash
-cat .envrc.config
+cat > .envrc.local << 'EOF'
+# Local configuration for vicar-native-toolkit
+export CONTAINER_IMAGE="terrain-intelligence-generator:opensource"
+export MARS_CONFIG_PATH="../terrain-intelligence-generator/docker/mars_calibration_m20"
+EOF
 ```
 
-**Key settings you'll see:**
-- `CONTAINER_IMAGE="vicar-tools:tig-demo"` - Uses the TIG demo image
-- `VICAR_INSTALL_PREFIX="/usr/local/vicar/m20-g87"` - M20-G87 RPM build paths
-- `AUTO_DISCOVER_TOOLS=true` - Automatically finds all VICAR commands
-- `PARENT_DIR` mount - Makes `../project/` accessible as `/projects/` in container
+**Key settings:**
+- `CONTAINER_IMAGE="terrain-intelligence-generator:opensource"` - Uses the TIG opensource image
+- `MARS_CONFIG_PATH` - Path to MARS calibration files (required for stereo processing)
+- `AUTO_DISCOVER_TOOLS=true` - Automatically finds all VICAR commands (default)
 
 **This configuration is ready to use!** No changes needed.
 
@@ -107,27 +116,24 @@ direnv allow
 ```
 
 **What happens:**
-1. 📝 Loads configuration from `.envrc.config`
+1. 📝 Loads configuration from `.envrc.local` or defaults
 2. 🔧 Detects your platform (macOS/Linux)
-3. 📦 Starts `vicar-sidecar` container with TIG demo image
-4. 📁 Mounts workspace and parent directory
-5. 🔨 Discovers and generates wrappers for ~700+ VICAR commands
+3. 📦 Starts `vicar-sidecar` container with terrain-intelligence-generator image
+4. 📁 Mounts workspace directory
+5. 🔨 Discovers and generates wrappers for ~543 VICAR commands
 6. ✅ Adds wrappers to your PATH
 
 **Expected output:**
 ```
-📝 Loading configuration from .envrc.config
-🔧 VICAR Native Toolkit - Darwin detected
-   Image: vicar-tools:tig-demo
-   Container: vicar-sidecar
-📦 Starting vicar-sidecar container...
-📁 Mounting parent directory: /Users/han/IdeaProjects/MIPL/vicar -> /projects
-✅ Container started successfully
-🔨 Generating wrapper scripts...
-🔍 Auto-discovering VICAR executables...
-✅ Found XXX executables
-
-✅ VICAR Native Toolkit activated!
+[vicar-toolkit] Activating VICAR Native Toolkit...
+[vicar-toolkit] Image: terrain-intelligence-generator:opensource
+[vicar-toolkit] Container 'vicar-sidecar' is already running
+[vicar-toolkit] Auto-discovering VICAR commands...
+[vicar-toolkit] Found 543 commands
+[vicar-toolkit] Generated 543 symlinks to vicar-exec
+[vicar-toolkit] Created 4 utility command symlinks
+[vicar-toolkit] ✅ Toolkit activated! VICAR commands now available.
+[vicar-toolkit] Try: gen, label, marsmap, toolkit-shell, toolkit-status
 
 Available commands:
   toolkit-status    - Show configuration and container status
@@ -135,8 +141,8 @@ Available commands:
   toolkit-stop      - Stop and remove container
   toolkit-restart   - Restart container with new configuration
 
-VICAR tools: XXX commands available
-Working directory: /Users/han/IdeaProjects/MIPL/vicar/vicar-native-toolkit/workspace
+VICAR tools: 543 commands available
+Working directory: <current-path>/vicar-native-toolkit/workspace
 ```
 
 **Time:** ~30-60 seconds
@@ -152,31 +158,28 @@ If auto-discovery found 0 tools (due to timing), manually generate wrappers:
 ls .direnv/wrappers/ | wc -l
 ```
 
-**If less than 700 wrappers**, regenerate them:
+**If less than 543 wrappers**, regenerate them:
 
 ```bash
 # Clean and regenerate
 rm -rf .direnv/wrappers/*
-./.direnv/generate-wrappers.sh
+toolkit-restart
+cd .. && cd -
 ```
 
 **Expected output:**
 ```
-Discovering executables...
-Found 782 executables, generating wrappers...
-  Generated 100 wrappers...
-  Generated 200 wrappers...
-  ...
-  Generated 700 wrappers...
-✅ Generated 782 wrappers in .direnv/wrappers
+[vicar-toolkit] Found 543 commands
+[vicar-toolkit] Generated 543 symlinks to vicar-exec
+✅ Generated 543 wrappers in .direnv/wrappers
 ```
 
 **Verify critical commands:**
 ```bash
-ls .direnv/wrappers/ | grep -E "^(gen|label|hist|marscorr|marsxyz)$"
+ls .direnv/wrappers/ | grep -E "^(gen|label|hist|marscorr|marsxyz|marsmesh)$"
 ```
 
-Should show all 5 commands.
+Should show all 6 commands.
 
 ---
 
@@ -235,18 +238,13 @@ VICAR Native Toolkit Status
 ======================================================================
 
 Container: vicar-sidecar
-Image: vicar-tools:tig-demo
-Status: running
+Image: terrain-intelligence-generator:opensource
+Status: Up X seconds
 
 Mounts:
-  /Users/han/IdeaProjects/MIPL/vicar/vicar-native-toolkit/workspace -> /workspace
-  /Users/han/IdeaProjects/MIPL/vicar -> /projects
+  <toolkit-path>/workspace -> /workspace
 
-Wrappers: XXX commands in .direnv/wrappers
-
-VICAR Paths (inside container):
-  BIN: /usr/local/bin:/usr/local/vicar/m20-g87/p2/lib/x86-64-linx:/usr/local/vicar/m20-g87/mars/lib/x86-64-linx:...
-  LIB: /usr/local/vicar/m20-g87/olb/x86-64-linx:/usr/local/vicar/m20-g87/mars/lib/x86-64-linx:...
+Wrappers: 547 commands in .direnv/wrappers
 ```
 
 **✅ Success!** Toolkit is configured and running.
@@ -264,11 +262,13 @@ ls .direnv/wrappers/ | grep ^mars | head -10
 
 **Expected output:**
 ```
+marsautoloco
+marsautotie
 marscorr
+marscor3
 marsdisparity
-marsmap
-marsrad
-marstie
+marsmesh
+marsrfilt
 marsxyz
 ...
 ```
@@ -277,101 +277,57 @@ marsxyz
 
 ```bash
 # Test that marscorr wrapper exists and is executable
-which marscorr
-cat $(which marscorr) | head -20
+which marsmesh
+file $(which marsmesh)
 ```
 
 **Expected output:**
 ```
-/Users/han/IdeaProjects/MIPL/vicar/vicar-native-toolkit/.direnv/wrappers/marscorr
+<toolkit-path>/.direnv/wrappers/marsmesh
 
-#!/usr/bin/env bash
-# Wrapper for: marscorr
-
-TTY_FLAG=""
-[ -t 0 ] && [ -t 1 ] && TTY_FLAG="-t"
-
-exec docker exec -i ${TTY_FLAG} \
-    -e DISPLAY=host.docker.internal:0 \
-    -e PATH="/usr/local/bin:..." \
-    -e LD_LIBRARY_PATH="/usr/local/vicar/m20-g87/..." \
-    -w /workspace \
-    "vicar-sidecar" \
-    marscorr "$@"
+<toolkit-path>/.direnv/wrappers/marsmesh: symbolic link to ../vicar-exec
 ```
 
 **✅ Success!** Mars commands have native-like wrappers.
 
 ---
 
-## Step 8: Prepare for TIG Demo
+## Step 8: Test with Real Mars Data
 
-Now set up access to the TIG demo directory:
-
-```bash
-# Create symlink to demo directory (if not already present)
-cd workspace
-ln -sf ../../vicar-tig-demo demo
-ls -la demo
-```
-
-**Verify access:**
-```bash
-# Check that demo files are accessible from container
-docker exec vicar-sidecar ls -la /workspace/demo 2>&1 | head -5
-```
-
-**Note:** Due to mount limitations, you may need to copy demo data to workspace or access via the `/projects` mount.
-
-### Option A: Copy Demo Data to Workspace
+If you have Mars stereo images or XYZ point clouds, you can copy them to the workspace:
 
 ```bash
 cd workspace
-cp -r ../../vicar-tig-demo/data/input/edrs/ ./edrs/
-ls -lh edrs/
+
+# Copy data files (adjust paths as needed)
+cp /path/to/your/left.VIC left_edr.vic
+cp /path/to/your/right.VIC right_edr.vic
+# or
+cp /path/to/your/pointcloud.xyz .
+
+ls -lh *.vic *.xyz
 ```
-
-### Option B: Access via /projects Mount
-
-The parent directory is mounted at `/projects`, so:
-- Host: `/Users/han/IdeaProjects/MIPL/vicar/vicar-tig-demo/data/input/edrs/`
-- Container: `/projects/vicar-tig-demo/data/input/edrs/`
 
 ---
 
-## Step 9: Test with Real M20 EDR Files
-
-Copy one EDR stereo pair to workspace for testing:
+## Step 9: Test Label Command
 
 ```bash
 cd workspace
 
-# Copy EDR files
-cp ../../vicar-tig-demo/data/input/edrs/NRF_1812_0827803370_941EDR_N0870268NCAM02812_01_195J01.VIC left_edr.vic
-cp ../../vicar-tig-demo/data/input/edrs/NRF_1812_0827803370_941EDR_N0870268NCAM02812_04_195J01.VIC right_edr.vic
+# Generate a test image first
+gen out=test.vic nl=100 ns=100
 
-ls -lh *_edr.vic
+# View file info
+file test.vic
 ```
 
 **Expected output:**
 ```
--rw-r--r--  1 han  staff   7.2M  left_edr.vic
--rw-r--r--  1 han  staff   7.2M  right_edr.vic
+test.vic: VICAR image data, 8 bits  = VAX byte
 ```
 
-### Test Label Command (Mars Metadata)
-
-```bash
-# This will show TAE subcommand error, but proves command works
-label left_edr.vic 2>&1 | head -5
-```
-
-**Expected output:**
-```
-[TAE-SUBREQ] Subcommand is required for 'LABEL'.
-```
-
-**✅ This is expected!** VICAR's label command requires subcommands. The wrapper is working.
+**✅ This confirms the toolkit is working!** VICAR commands execute natively.
 
 ---
 
@@ -386,10 +342,10 @@ docker ps | grep vicar-sidecar
 
 # 2. Wrappers generated?
 ls .direnv/wrappers/ | wc -l
-# ✅ Should show: 700+ wrappers
+# ✅ Should show: 543+ wrappers
 
 # 3. Key commands available?
-which gen hist label marscorr marsxyz
+which gen hist label marscorr marsxyz marsmesh
 # ✅ Should show: .direnv/wrappers/<command> for each
 
 # 4. Basic VICAR command works?
@@ -398,22 +354,19 @@ gen out=test.vic nl=100 ns=100 2>&1 | grep "GEN task completed"
 
 # 5. Mars commands available?
 ls .direnv/wrappers/ | grep ^mars | wc -l
-# ✅ Should show: 70+ Mars commands
+# ✅ Should show: 109 Mars commands
 
-# 6. EDR files accessible?
-ls -lh *_edr.vic 2>/dev/null | wc -l
-# ✅ Should show: 2 (if copied in Step 9)
+# 6. Data files accessible? (if copied in Step 8)
+ls -lh *.vic *.xyz 2>/dev/null | wc -l
+# ✅ Should show: number of files copied
 
 # 7. Toolkit status?
 toolkit-status | grep "Status:"
-# ✅ Should show: Status: running
+# ✅ Should show: Status: Up X seconds
 
-# 8. Java vicario available?
-docker exec vicar-sidecar which vicario
-# ✅ Should show: /usr/local/bin/vicario
-
-docker exec vicar-sidecar java -version
-# ✅ Should show: OpenJDK 11
+# 8. Container running?
+docker ps | grep vicar-sidecar
+# ✅ Should show: vicar-sidecar   Up X seconds
 ```
 
 **All checks passed?** You're ready for the demo! 🎉
@@ -439,9 +392,10 @@ source ~/.zshrc
 
 ### Issue: "Docker image not found"
 
-**Solution:** Build the TIG demo image:
+**Solution:** Build the opensource image:
 ```bash
-./scripts/build-tig-demo-image.sh
+cd ../terrain-intelligence-generator/docker
+docker build --platform linux/amd64 -t terrain-intelligence-generator:opensource .
 ```
 
 ### Issue: "Container fails to start"
@@ -463,17 +417,12 @@ cd .. && cd -
 
 **Solution:** Manually regenerate wrappers:
 ```bash
-# Stop container
-toolkit-stop
-
-# Remove old wrappers
-rm -rf .direnv/wrappers/*
-
-# Restart (will regenerate wrappers)
+# Restart toolkit
+toolkit-restart
 cd .. && cd -
 
-# If still 0, use manual generation
-./.direnv/generate-wrappers.sh
+# Check wrapper count
+ls .direnv/wrappers/ | wc -l
 ```
 
 ### Issue: "Commands not in PATH"
@@ -497,53 +446,62 @@ xhost +localhost
 
 ## What You've Accomplished
 
-✅ **Built vicar-tools:tig-demo image** with Java vicario  
-✅ **Configured toolkit** for M20-G87 VICAR build  
+✅ **Built terrain-intelligence-generator:opensource image** with VICAR v5.0  
+✅ **Configured toolkit** for TIG demo  
 ✅ **Started long-running container** for fast command execution  
-✅ **Generated 700+ wrapper scripts** for native-like commands  
+✅ **Generated 543+ wrapper scripts** for native-like commands  
 ✅ **Tested basic VICAR commands** (gen, hist, label)  
-✅ **Verified Mars commands available** (marscorr, marsxyz, etc.)  
-✅ **Prepared real M20 EDR data** for demo  
-✅ **Validated Java vicario** for image format conversion  
+✅ **Verified Mars commands available** (marscorr, marsxyz, marsmesh, etc.)  
+✅ **Prepared workspace** for Mars data processing  
 
 ---
 
-## Next Steps: Run the TIG Demo
+## Next Steps: Run Mesh Generation Demo
 
-Now that the toolkit is ready, you can:
+Now that the toolkit is ready, you can run the mesh generation demo:
 
-### Option 1: Run Demo Scripts with Native Commands
+### Run the Full Stereo Pipeline
 
-The TIG demo scripts will automatically use the wrappers:
+The TIG demo script will run the complete pipeline from stereo images to 3D mesh:
 
 ```bash
-cd ../vicar-tig-demo
+cd ..
 
-# Stage 2: Stereo Matching (uses marscorr wrapper internally)
-python3 scripts/02-stereo-match.py \
-  --left data/input/edrs/NRF_1812_0827803370_941EDR_N0870268NCAM02812_01_195J01.VIC \
-  --right data/input/edrs/NRF_1812_0827803370_941EDR_N0870268NCAM02812_04_195J01.VIC \
-  --output data/cache/disparity.vic \
-  -v
+# Run with stereo pair (~10-15 minutes)
+./demo-mesh-native-toolkit.sh \
+  --stereo-left /path/to/left.VIC \
+  --stereo-right /path/to/right.VIC
 ```
 
-The Python script calls `subprocess.run(["marscorr", ...])` which finds the wrapper on PATH!
+### Or Run Commands Manually (Native Style)
 
-### Option 2: Run Commands Directly (Native Style)
+Follow the step-by-step commands in DEMO.md:
 
 ```bash
 cd vicar-native-toolkit/workspace
 
-# Direct command usage (native style!)
-gen out=left_small.vic nl=400 ns=400
-gen out=right_small.vic nl=400 ns=400
+# Copy stereo pair
+cp /path/to/left.VIC left.vic
+cp /path/to/right.VIC right.vic
 
-# Resize EDR files
-size inp=left_edr.vic out=left_small.vic nl=400 ns=400
-size inp=right_edr.vic out=right_small.vic nl=400 ns=400
+# Run stereo correlation
+marscorr \( left.vic right.vic \) disparity_init.img template=15 search=51 quality=0.2
+marscor3 \( left.vic right.vic \) disparity.img in_disp=disparity_init.img template=11 search=31 quality=0.4
 
-# Run stereo correlation (may take several minutes)
-marscorr inp=(left_small.vic,right_small.vic) out=disparity.vic
+# Generate XYZ point cloud
+marsxyz \( left.vic right.vic \) pointcloud.xyz disp=disparity.img
+
+# Filter rover hardware
+marsrfilt inp=pointcloud.xyz out=pointcloud_filtered.xyz
+
+# Generate mesh
+marsmesh inp=pointcloud_filtered.xyz out=terrain.obj \
+  in_skin=right.vic \
+  x_subsample=1 y_subsample=1 \
+  range_min=0.2 range_mid=100 range_max=100 \
+  lod_levels=10 max_angle=87.5 \
+  res_min=3000 res_max=500000 density=1 -adaptive \
+  maxgap=5
 ```
 
 **No Docker syntax needed!** Commands work like native CLI tools.
@@ -613,20 +571,19 @@ Result returns to user
 
 ## Summary
 
-You've successfully set up vicar-native-toolkit to provide **native-like command execution** for 700+ VICAR commands including all Mars processing tools. The toolkit:
+You've successfully set up vicar-native-toolkit to provide **native-like command execution** for 543 VICAR commands including all Mars processing tools. The toolkit:
 
 - ✅ **Feels native** - No Docker syntax in user commands
 - ✅ **Works fast** - Long-running container (~50-100ms latency)
-- ✅ **Supports M20-G87** - RPM-based VICAR build with Mars tools
-- ✅ **Auto-discovers commands** - 700+ wrappers generated automatically
-- ✅ **Python-friendly** - Scripts just call commands via subprocess
+- ✅ **Supports VICAR v5.0** - Open source build with Mars tools
+- ✅ **Auto-discovers commands** - 543+ wrappers generated automatically
 - ✅ **Demo-ready** - All components tested and validated
 
-**Ready to run the TIG demo with native-like VICAR commands!** 🚀
+**Ready to run the TIG mesh generation demo with native-like VICAR commands!** 🚀
 
 ---
 
-**Document Version:** 1.0  
-**Last Updated:** March 31, 2026  
-**Toolkit Version:** Configurable image support  
-**Target Image:** vicar-tools:tig-demo (M20-G87 + Python deps)
+**Document Version:** 2.0  
+**Last Updated:** June 29, 2026  
+**Toolkit Version:** Symlink-based wrapper system  
+**Target Image:** terrain-intelligence-generator:opensource (VICAR v5.0)

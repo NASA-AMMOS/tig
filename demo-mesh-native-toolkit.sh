@@ -16,23 +16,17 @@ IMAGE="ghcr.io/nasa-ammos/tig/terrain-intelligence-generator:opensource"
 # Parse arguments
 STEREO_LEFT=""
 STEREO_RIGHT=""
-XYZ_FILE=""
 TEXTURE_FILE=""
 
 print_usage() {
-  echo "Usage: $0 [OPTIONS]"
+  echo "Usage: $0 --stereo-left FILE --stereo-right FILE [--texture FILE]"
   echo ""
   echo "Options:"
-  echo "  --xyz FILE           Use pre-computed XYZ point cloud (fast)"
-  echo "  --stereo-left FILE   Left stereo image (for XYZ calculation)"
-  echo "  --stereo-right FILE  Right stereo image (for XYZ calculation)"
-  echo "  --texture FILE       Texture image (optional, defaults to left stereo)"
+  echo "  --stereo-left FILE   Left stereo image (required)"
+  echo "  --stereo-right FILE  Right stereo image (required)"
+  echo "  --texture FILE       Texture image (optional, defaults to right stereo)"
   echo ""
-  echo "Examples:"
-  echo "  # Use pre-computed XYZ (fast, ~90 seconds)"
-  echo "  $0 --xyz pointcloud.IMG --texture image.IMG"
-  echo ""
-  echo "  # Calculate XYZ from stereo pair (slow, ~10+ minutes)"
+  echo "Example:"
   echo "  $0 --stereo-left left.VIC --stereo-right right.VIC"
   echo ""
   echo "Requirements:"
@@ -44,10 +38,6 @@ print_usage() {
 
 while [[ $# -gt 0 ]]; do
   case $1 in
-    --xyz)
-      XYZ_FILE="$2"
-      shift 2
-      ;;
     --stereo-left)
       STEREO_LEFT="$2"
       shift 2
@@ -71,19 +61,14 @@ while [[ $# -gt 0 ]]; do
 done
 
 # Validate inputs
-if [ -z "$XYZ_FILE" ] && [ -z "$STEREO_LEFT" ]; then
-  echo "ERROR: Must specify either --xyz or --stereo-left/--stereo-right"
+if [ -z "$STEREO_LEFT" ]; then
+  echo "ERROR: --stereo-left is required"
   print_usage
 fi
 
-if [ -n "$STEREO_LEFT" ] && [ -z "$STEREO_RIGHT" ]; then
-  echo "ERROR: --stereo-right required when using --stereo-left"
-  exit 1
-fi
-
-if [ -n "$STEREO_RIGHT" ] && [ -z "$STEREO_LEFT" ]; then
-  echo "ERROR: --stereo-left required when using --stereo-right"
-  exit 1
+if [ -z "$STEREO_RIGHT" ]; then
+  echo "ERROR: --stereo-right is required"
+  print_usage
 fi
 
 # Check prerequisites
@@ -148,9 +133,6 @@ fi
 mkdir -p "$WORKSPACE"
 
 # Resolve input file paths to absolute paths before changing directory
-if [ -n "$XYZ_FILE" ]; then
-  XYZ_FILE="$(cd "$(dirname "$XYZ_FILE")" && pwd)/$(basename "$XYZ_FILE")"
-fi
 if [ -n "$TEXTURE_FILE" ]; then
   TEXTURE_FILE="$(cd "$(dirname "$TEXTURE_FILE")" && pwd)/$(basename "$TEXTURE_FILE")"
 fi
@@ -209,105 +191,85 @@ echo ""
 # Copy input files to workspace
 cd workspace
 
-if [ -n "$XYZ_FILE" ]; then
-  # Use pre-computed XYZ
-  echo "Step 1: Copying pre-computed XYZ point cloud..."
-  cp "$XYZ_FILE" pointcloud.xyz
-  echo "✓ XYZ copied: $(du -h pointcloud.xyz | cut -f1)"
-  
-  # Set texture
-  if [ -n "$TEXTURE_FILE" ]; then
-    cp "$TEXTURE_FILE" texture.img
-  elif [ -n "$STEREO_LEFT" ]; then
-    cp "$STEREO_LEFT" texture.img
-  else
-    echo "ERROR: No texture specified"
-    exit 1
-  fi
-  
-  # For XYZ-only mode, use unfiltered as filtered (no rover to filter)
-  cp pointcloud.xyz pointcloud_filtered.xyz
-else
-  # Calculate XYZ from stereo pair
-  echo "Step 1: Processing stereo pair to generate XYZ..."
-  echo "  WARNING: This takes 10+ minutes for full-resolution images"
-  echo ""
-  
-  # Validate files exist
-  if [ ! -f "$STEREO_LEFT" ]; then
-    echo "ERROR: Left stereo file not found: $STEREO_LEFT"
-    exit 1
-  fi
-  if [ ! -f "$STEREO_RIGHT" ]; then
-    echo "ERROR: Right stereo file not found: $STEREO_RIGHT"
-    exit 1
-  fi
-  
-  # Copy stereo pair to workspace
-  cp "$STEREO_LEFT" left.vic
-  cp "$STEREO_RIGHT" right.vic
-  echo "  ✓ Stereo pair copied"
-  
-  # Step 1a: Stereo correlation (disparity map)
-  echo ""
-  echo "  Step 1a: Running stereo correlation..."
-  echo "  Note: Commands look native but execute in Docker container!"
-  echo ""
-  
-  echo "    Running initial correlation (marscorr)..."
-  marscorr \( left.vic right.vic \) disparity_init.img template=15 search=51 quality=0.2 2>&1 | \
-    grep -E "tiepoints gathered|Seed point" | tail -3 || true
-  
-  if [ ! -f disparity_init.img ]; then
-    echo "  ❌ ERROR: marscorr failed to generate disparity_init.img"
-    exit 1
-  fi
+# Process stereo pair to generate XYZ
+echo "Step 1: Processing stereo pair to generate XYZ..."
+echo "  WARNING: This takes 10+ minutes for full-resolution images"
+echo ""
+
+# Validate files exist
+if [ ! -f "$STEREO_LEFT" ]; then
+  echo "ERROR: Left stereo file not found: $STEREO_LEFT"
+  exit 1
+fi
+if [ ! -f "$STEREO_RIGHT" ]; then
+  echo "ERROR: Right stereo file not found: $STEREO_RIGHT"
+  exit 1
+fi
+
+# Copy stereo pair to workspace
+cp "$STEREO_LEFT" left.vic
+cp "$STEREO_RIGHT" right.vic
+echo "  ✓ Stereo pair copied"
+
+# Step 1a: Stereo correlation (disparity map)
+echo ""
+echo "  Step 1a: Running stereo correlation..."
+echo "  Note: Commands look native but execute in Docker container!"
+echo ""
+
+echo "    Running initial correlation (marscorr)..."
+marscorr \( left.vic right.vic \) disparity_init.img template=15 search=51 quality=0.2 2>&1 | \
+  grep -E "tiepoints gathered|Seed point" | tail -3 || true
+
+if [ ! -f disparity_init.img ]; then
+  echo "  ❌ ERROR: marscorr failed to generate disparity_init.img"
+  exit 1
+fi
   echo "    ✓ Initial disparity generated"
   
-  echo "    Running refinement (marscor3)..."
-  marscor3 \( left.vic right.vic \) disparity.img in_disp=disparity_init.img template=11 search=31 quality=0.4 -omp_on 2>&1 | \
-    grep -E "tiepoints|Pyramid|Zooming" | tail -3 || true
-  
-  if [ ! -f disparity.img ]; then
-    echo "  ❌ ERROR: marscor3 failed to generate disparity.img"
-    exit 1
-  fi
-  
-  echo "  ✓ Disparity map generated"
-  
-  # Step 1b: Generate XYZ from disparity
-  echo ""
-  echo "  Step 1b: Generating XYZ point cloud (marsxyz)..."
-  marsxyz \( left.vic right.vic \) pointcloud.xyz disp=disparity.img \
-    error=10.0 abserr=0.15 lined=100 avgline=50 zlimit=\(-300,300\) spike_range=0.04 outlier=0.5 2>&1 | \
-    grep -E "Successfully|valid|rejected|XYZ" | tail -10 || true
-  
-  if [ ! -f pointcloud.xyz ]; then
-    echo "  ❌ ERROR: marsxyz failed to generate pointcloud.xyz"
-    exit 1
-  fi
-  
-  echo "  ✓ XYZ point cloud generated"
-  
-  # Step 1c: Filter rover hardware from XYZ
-  echo ""
-  echo "  Step 1c: Filtering rover hardware (marsrfilt)..."
-  marsrfilt inp=pointcloud.xyz out=pointcloud_filtered.xyz 2>&1 | \
-    grep -E "MARSRFILT|Version|Filtering|points|removed" || true
-  
-  if [ ! -f pointcloud_filtered.xyz ]; then
-    echo "  ⚠ WARNING: marsrfilt failed, using unfiltered XYZ"
-    cp pointcloud.xyz pointcloud_filtered.xyz
-  else
-    echo "  ✓ Rover hardware filtered"
-  fi
-  
-  # Use right image as texture
-  if [ -n "$TEXTURE_FILE" ]; then
-    cp "$TEXTURE_FILE" texture.img
-  else
-    cp "$STEREO_RIGHT" texture.img
-  fi
+echo "    Running refinement (marscor3)..."
+marscor3 \( left.vic right.vic \) disparity.img in_disp=disparity_init.img template=11 search=31 quality=0.4 -omp_on 2>&1 | \
+  grep -E "tiepoints|Pyramid|Zooming" | tail -3 || true
+
+if [ ! -f disparity.img ]; then
+  echo "  ❌ ERROR: marscor3 failed to generate disparity.img"
+  exit 1
+fi
+
+echo "  ✓ Disparity map generated"
+
+# Step 1b: Generate XYZ from disparity
+echo ""
+echo "  Step 1b: Generating XYZ point cloud (marsxyz)..."
+marsxyz \( left.vic right.vic \) pointcloud.xyz disp=disparity.img \
+  error=10.0 abserr=0.15 lined=100 avgline=50 zlimit=\(-300,300\) spike_range=0.04 outlier=0.5 2>&1 | \
+  grep -E "Successfully|valid|rejected|XYZ" | tail -10 || true
+
+if [ ! -f pointcloud.xyz ]; then
+  echo "  ❌ ERROR: marsxyz failed to generate pointcloud.xyz"
+  exit 1
+fi
+
+echo "  ✓ XYZ point cloud generated"
+
+# Step 1c: Filter rover hardware from XYZ
+echo ""
+echo "  Step 1c: Filtering rover hardware (marsrfilt)..."
+marsrfilt inp=pointcloud.xyz out=pointcloud_filtered.xyz 2>&1 | \
+  grep -E "MARSRFILT|Version|Filtering|points|removed" || true
+
+if [ ! -f pointcloud_filtered.xyz ]; then
+  echo "  ⚠ WARNING: marsrfilt failed, using unfiltered XYZ"
+  cp pointcloud.xyz pointcloud_filtered.xyz
+else
+  echo "  ✓ Rover hardware filtered"
+fi
+
+# Use right image as texture (or custom texture if provided)
+if [ -n "$TEXTURE_FILE" ]; then
+  cp "$TEXTURE_FILE" texture.img
+else
+  cp "$STEREO_RIGHT" texture.img
 fi
 
 echo ""
