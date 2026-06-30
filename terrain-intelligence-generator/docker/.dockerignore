@@ -1,0 +1,6 @@
+# Ignore generated/temporary files
+*.log
+*.pyc
+__pycache__/
+.git/
+.gitignore
