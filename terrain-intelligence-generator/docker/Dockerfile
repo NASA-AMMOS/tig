@@ -123,9 +123,6 @@ RUN dnf -y --nogpgcheck --setopt=install_weak_deps=False --setopt=tsflags=nodocs
     motif \
     # Java runtime (Java 11 headless for vicario.jar)
     java-11-openjdk-headless \
-    # Python runtime
-    python39 \
-    python39-pip \
     # Image processing runtime libraries
     libtiff \
     libpng \

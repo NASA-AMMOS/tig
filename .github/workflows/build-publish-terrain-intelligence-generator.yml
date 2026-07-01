@@ -155,14 +155,13 @@ jobs:
           
           if [ "${{ github.event_name }}" != "pull_request" ]; then
             echo "**Test Results:**" >> $GITHUB_STEP_SUMMARY
-            echo "✅ 15 comprehensive tests executed" >> $GITHUB_STEP_SUMMARY
+            echo "✅ 14 comprehensive tests executed" >> $GITHUB_STEP_SUMMARY
             echo "- Container startup and environment" >> $GITHUB_STEP_SUMMARY
             echo "- Directory structure verification (flattening)" >> $GITHUB_STEP_SUMMARY
             echo "- Wrapper scripts (545 commands)" >> $GITHUB_STEP_SUMMARY
             echo "- VICAR operations (gen, list, copy, stretch)" >> $GITHUB_STEP_SUMMARY
             echo "- vicario converter (PNG, JPEG, TIFF)" >> $GITHUB_STEP_SUMMARY
             echo "- VISOR data not bundled (external mount)" >> $GITHUB_STEP_SUMMARY
-            echo "- Python/Pillow dependencies" >> $GITHUB_STEP_SUMMARY
             echo "- Docker exec pattern (terrain-intelligence-generator)" >> $GITHUB_STEP_SUMMARY
             echo "- File persistence to host" >> $GITHUB_STEP_SUMMARY
             echo "- MARS commands (345 programs)" >> $GITHUB_STEP_SUMMARY
@@ -390,25 +389,9 @@ jobs:
           '
           echo ""
           
-          # Test 12: Python and dependencies
+          # Test 12: Docker exec pattern (vicar-native-toolkit simulation)
           echo "============================================"
-          echo "Test 12: Python and dependencies"
-          echo "============================================"
-          docker run --rm ${IMAGE_TAG} bash -c '
-            python3 --version
-            python3 -c "import PIL; print(f\"Pillow {PIL.__version__}\")"
-            if [ $? -eq 0 ]; then
-              echo "✓ Python and Pillow available"
-            else
-              echo "✗ ERROR: Python dependencies missing"
-              exit 1
-            fi
-          '
-          echo ""
-          
-          # Test 13: Docker exec pattern (vicar-native-toolkit simulation)
-          echo "============================================"
-          echo "Test 13: Docker exec pattern (long-running container)"
+          echo "Test 12: Docker exec pattern (long-running container)"
           echo "============================================"
           docker run -d --name vicar-test-container -v ${TEST_WORKSPACE}:/workspace:Z ${IMAGE_TAG} tail -f /dev/null
           sleep 2
@@ -447,9 +430,9 @@ jobs:
           docker rm vicar-test-container
           echo ""
           
-          # Test 14: File persistence verification
+          # Test 13: File persistence verification
           echo "============================================"
-          echo "Test 14: File persistence to host"
+          echo "Test 13: File persistence to host"
           echo "============================================"
           echo "Files created in test workspace:"
           ls -lh ${TEST_WORKSPACE}
@@ -471,9 +454,9 @@ jobs:
           fi
           echo ""
           
-          # Test 15: MARS commands availability
+          # Test 14: MARS commands availability
           echo "============================================"
-          echo "Test 15: MARS commands availability"
+          echo "Test 14: MARS commands availability"
           echo "============================================"
           docker run --rm ${IMAGE_TAG} bash -c '
             MARS_COUNT=$(ls /usr/local/bin | grep -c "^mars")
@@ -522,8 +505,7 @@ jobs:
           - VICAR image processing tools (pre-built binaries)
           - TAE (Terminal Application Executive)
           - MARS terrain processing tools
-           - Python 3.9 runtime
-           - Vicario - VICAR to PNG/JPEG/TIFF converter
+           - Vicario (Java) - VICAR to PNG/JPEG/TIFF converter
            - Runtime-ready for external calibration/data mounts
            - All necessary runtime dependencies
           
