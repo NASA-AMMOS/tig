@@ -15,10 +15,13 @@ services:
     environment:
       - WORKSPACE=/usr/local/vicar
       - VICSYS=DEVELOPMENT
+      # - MARS_CONFIG_PATH=/usr/local/vicar/mars_calib  # Uncomment if mounting calibration
     
     # Volumes - mount workspace
     volumes:
       - ./workspace:/workspace:Z
+      # MARS calibration (uncomment and customize)
+      # - ${MARS_CONFIG_PATH}:/usr/local/vicar/mars_calib:ro,Z
       # Linux X11 socket (commented out for macOS, will be overridden by .envrc)
       # - /tmp/.X11-unix:/tmp/.X11-unix
       # - ${HOME}/.Xauthority:/root/.Xauthority:ro
