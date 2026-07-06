@@ -9,45 +9,49 @@
 # 4. /opt/mars_calib (system-wide)
 # 5. Current directory
 
+# Given a candidate directory, echo the first path that is a VALID calib dir:
+# either the candidate itself, or a nested mars_calibration_m20/ inside it.
+# Returns 0 on success (and echoes the valid path), 1 otherwise.
+resolve_calib_dir() {
+    local candidate="$1"
+    [ -d "$candidate" ] || return 1
+
+    if verify_calibration "$candidate"; then
+        echo "$candidate"
+        return 0
+    fi
+
+    # Common repo layout: wrapper dir containing mars_calibration_m20/
+    if verify_calibration "$candidate/mars_calibration_m20"; then
+        echo "$candidate/mars_calibration_m20"
+        return 0
+    fi
+
+    return 1
+}
+
 find_calibration() {
-    local calib_dir=""
-    
-    # Check MARS_CALIB_PATH environment variable
-    if [ -n "$MARS_CALIB_PATH" ] && [ -d "$MARS_CALIB_PATH" ]; then
-        echo "$MARS_CALIB_PATH"
-        return 0
-    fi
-    
-    # Check relative to script location (for repo demos)
     local script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-    if [ -d "$script_dir/calibration" ]; then
-        echo "$script_dir/calibration"
-        return 0
-    fi
-    
-    # Check user's home directory
-    if [ -d "$HOME/.mars_calib" ]; then
-        echo "$HOME/.mars_calib"
-        return 0
-    fi
-    
-    # Check system-wide location
-    if [ -d "/opt/mars_calib" ]; then
-        echo "/opt/mars_calib"
-        return 0
-    fi
-    
-    # Check current directory
-    if [ -d "./mars_calibration_m20" ]; then
-        echo "./mars_calibration_m20"
-        return 0
-    fi
-    
-    if [ -d "./mars_calib" ]; then
-        echo "./mars_calib"
-        return 0
-    fi
-    
+    local candidate
+
+    # Priority-ordered list of candidate locations
+    for candidate in \
+        "$MARS_CALIB_PATH" \
+        "$script_dir/calibration" \
+        "$HOME/.mars_calib" \
+        "/opt/mars_calib" \
+        "./mars_calibration_m20" \
+        "./mars_calib"; do
+
+        [ -n "$candidate" ] || continue
+
+        local resolved
+        if resolved=$(resolve_calib_dir "$candidate"); then
+            echo "$resolved"
+            return 0
+        fi
+    done
+
     # Not found
     return 1
 }

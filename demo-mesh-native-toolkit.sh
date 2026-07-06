@@ -39,14 +39,17 @@ print_usage() {
 while [[ $# -gt 0 ]]; do
   case $1 in
     --stereo-left)
+      [ -z "$2" ] && { echo "ERROR: --stereo-left requires a FILE argument"; print_usage; }
       STEREO_LEFT="$2"
       shift 2
       ;;
     --stereo-right)
+      [ -z "$2" ] && { echo "ERROR: --stereo-right requires a FILE argument"; print_usage; }
       STEREO_RIGHT="$2"
       shift 2
       ;;
     --texture)
+      [ -z "$2" ] && { echo "ERROR: --texture requires a FILE argument"; print_usage; }
       TEXTURE_FILE="$2"
       shift 2
       ;;
