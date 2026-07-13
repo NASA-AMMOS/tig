@@ -1,10 +1,10 @@
 # Terrain Intelligence Generator (TIG)
 
-Mars 2020 stereo terrain reconstruction pipeline using NASA's VICAR image processing system.
+Open source stereo terrain reconstruction pipeline using NASA's VICAR image processing system.
 
 ## Overview
 
-TIG provides Docker-based tools for generating 3D terrain meshes from Mars rover stereo camera images. Built on VICAR (Video Image Communication and Retrieval), NASA JPL's image processing system used across planetary missions.
+TIG provides a Docker-based execution environment for generating 3D terrain meshes from stereo camera images. Built on VICAR (Video Image Communication and Retrieval), NASA JPL's image processing system used across planetary missions. The vicar-native-toolkit provides a helper/wrapper script to interact with the TIG container.
 
 ## Features
 
@@ -12,7 +12,8 @@ TIG provides Docker-based tools for generating 3D terrain meshes from Mars rover
 - **3D Point Clouds**: Convert disparity to XYZ coordinates (marsxyz)
 - **Mesh Generation**: Create textured 3D surface meshes (marsmesh)
 - **Format Conversion**: Export to OBJ, OpenInventor, GLB formats
-- **M2020 Support**: Includes Mars 2020 NavCam and Mastcam-Z calibration
+- **VISOR Calibration**: Integrates with VISOR (VICAR Institutional Stereo Observation Repository) containing M20 and many other open source mission calibrations
+- **Open Source**: Community-accessible VICAR-based terrain processing
 
 ## Quick Start
 
@@ -65,24 +66,25 @@ meshlab workspace/terrain.obj
 
 ## Components
 
-## Components
-
 ### VICAR Native Toolkit
 
-Docker environment with VICAR tools wrapped for native-like CLI usage. Features:
+A helper/wrapper script that provides native-like CLI usage for VICAR commands inside the TIG Docker execution environment. Features:
 - ✨ **One-command setup** via `bootstrap.sh`
 - 🚀 **Fast activation** (~1 second, symlink-based wrappers)
 - 🔧 **Auto-discovers** ~550 VICAR commands
 - 🐳 **Custom image support** via `--image` flag
-- 📊 **MARS calibration mounting** for terrain processing
+- 📊 **VISOR calibration mounting** for terrain processing
 
 📁 `vicar-native-toolkit/`  
 📖 [Toolkit README](vicar-native-toolkit/README.md) | [Quick Reference](vicar-native-toolkit/docs/QUICKREF.md)
 
 ### Terrain Intelligence Generator
-Pre-built demos and M2020 calibration for mesh generation.
+Docker execution environment with pre-built demos and VISOR calibration integration for mesh generation.
 - 📁 `terrain-intelligence-generator/docker/`
 - 📖 [Getting Started](docs/getting-started.md)
+
+### VISOR (VICAR Institutional Stereo Observation Repository)
+Open source repository containing camera calibration files for multiple missions including M20 (Mars 2020), MER, MSL, and others. TIG integrates with VISOR for accurate stereo processing.
 
 ### Demos
 Example workflows for stereo mesh generation.
@@ -124,20 +126,21 @@ tig/
 │   ├── demos/                          # Demo guides
 │   ├── architecture/                   # System design
 │   └── reference/                      # Tool references
-├── vicar-native-toolkit/               # VICAR wrapper environment
-└── terrain-intelligence-generator/     # TIG Docker image
+├── vicar-native-toolkit/               # VICAR wrapper scripts
+└── terrain-intelligence-generator/     # TIG Docker execution environment
     └── docker/
         ├── Dockerfile
         ├── vicario.jar                 # Image converter
-        └── mars_calibration_m20/       # M2020 calibration
+        └── visor_calibration/          # VISOR calibration data
 ```
 
 ## Contributing
 
 Contributions welcome! This project uses:
 - **VICAR**: JPL's MIPL image processing system
-- **Docker**: Containerized VICAR environment
-- **Mars 2020**: Perseverance rover calibration data
+- **Docker**: Containerized VICAR execution environment
+- **VISOR**: Open source calibration repository for multiple missions
+- **Open Source**: Community-driven terrain processing tools
 
 ## License
 
@@ -150,5 +153,5 @@ VICAR (Video Image Communication and Retrieval) is a general-purpose image proce
 ## Acknowledgments
 
 - NASA JPL Multimission Image Processing Laboratory (MIPL)
-- Mars 2020 Perseverance Rover Team
 - VICAR development team
+- Open source planetary science community
