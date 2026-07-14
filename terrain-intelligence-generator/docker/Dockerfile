@@ -118,6 +118,7 @@ RUN dnf -y --nogpgcheck --setopt=install_weak_deps=False --setopt=tsflags=nodocs
     libXmu \
     libXi \
     libXt \
+    libXpm \
     xauth \
     # Motif runtime
     motif \
@@ -279,6 +280,30 @@ RUN ARCH_DIR="x86-64-linx" && \
             fi; \
         done; \
         echo "✓ Created $MARS_COUNT wrappers for MARS commands"; \
+    fi && \
+    # Create wrappers for GUI binaries (xvd and other X11 display tools)
+    if [ -d "${V2TOP}/gui/lib/$ARCH_DIR" ]; then \
+        GUI_COUNT=0; \
+        for cmd in ${V2TOP}/gui/lib/$ARCH_DIR/*; do \
+            if [ -f "$cmd" ] && [ -x "$cmd" ]; then \
+                cmdname=$(basename "$cmd"); \
+                if [[ ! "$cmdname" =~ \. ]] && [ ! -f "/usr/local/bin/$cmdname" ]; then \
+                    echo "#!/bin/bash" > /usr/local/bin/$cmdname; \
+                    echo "export V2TOP=${V2TOP}" >> /usr/local/bin/$cmdname; \
+                    echo "export WORKSPACE=${WORKSPACE}" >> /usr/local/bin/$cmdname; \
+                    echo "export VICSYS=DEVELOPMENT" >> /usr/local/bin/$cmdname; \
+                    echo "export LD_LIBRARY_PATH=$VICAR_LIB_PATH:\$LD_LIBRARY_PATH" >> /usr/local/bin/$cmdname; \
+                    echo "export PATH=${V2TOP}/gui/lib/$ARCH_DIR:${V2TOP}/mars/lib/$ARCH_DIR:${V2TOP}/p2/lib/$ARCH_DIR:\$PATH" >> /usr/local/bin/$cmdname; \
+                    echo "$cmd \"\$@\"" >> /usr/local/bin/$cmdname; \
+                    echo "exit_code=\$?" >> /usr/local/bin/$cmdname; \
+                    echo "# VICAR commands often return non-zero on success, treat 0-2 as success" >> /usr/local/bin/$cmdname; \
+                    echo "if [ \$exit_code -le 2 ]; then exit 0; else exit \$exit_code; fi" >> /usr/local/bin/$cmdname; \
+                    chmod +x /usr/local/bin/$cmdname; \
+                    GUI_COUNT=$((GUI_COUNT + 1)); \
+                fi; \
+            fi; \
+        done; \
+        echo "✓ Created $GUI_COUNT wrappers for GUI commands"; \
     fi
 
 # Set up VICAR environment for profile scripts
