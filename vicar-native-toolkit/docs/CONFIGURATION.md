@@ -11,28 +11,28 @@ Configuration is managed through `.envrc.local` for easy customization without e
 
 ## Quick Start
 
-### Using Bootstrap (Recommended)
+### Using the Makefile (Recommended)
 
 The easiest way to configure the toolkit:
 
 ```bash
 # Default opensource image
-./bootstrap.sh
+make bootstrap
 
 # Custom image
-./bootstrap.sh --image myregistry/vicar:v2.0
+make bootstrap IMAGE=myregistry/vicar:v2.0
 
 # With MARS calibration
-./bootstrap.sh --mars-calib /path/to/mars_calibration_m20
+make bootstrap MARS_CALIB=/path/to/mars_calibration_m20
 
 # Custom container name
-./bootstrap.sh --container my-vicar
+make bootstrap CONTAINER=my-vicar
 
 # Config only (no image pull)
-./bootstrap.sh --config-only --image custom:tag
+make config IMAGE=custom:tag
 ```
 
-The bootstrap script creates `.envrc.local` with your settings.
+The `make config` target creates `.envrc.local` with your settings.
 
 ### Manual Configuration
 
@@ -65,7 +65,7 @@ direnv allow
 | `.envrc` | Main activation script + defaults | ✅ Yes |
 | `.envrc.config` | Optional project defaults | ✅ Yes |
 | `.envrc.local` | Your personal config | ❌ No (gitignored) |
-| `bootstrap.sh` | Automated configuration generator | ✅ Yes |
+| `Makefile` | Setup automation / config generator | ✅ Yes |
 
 ### Generated Files (gitignored)
 
@@ -108,9 +108,9 @@ MARS_CONFIG_PATH="/path/to/mars_calibration_m20"
 # and MARS_CONFIG_PATH env var set inside container
 ```
 
-**Using bootstrap:**
+**Using the Makefile:**
 ```bash
-./bootstrap.sh --mars-calib /path/to/mars_calibration_m20
+make bootstrap MARS_CALIB=/path/to/mars_calibration_m20
 ```
 
 **Verify after activation:**

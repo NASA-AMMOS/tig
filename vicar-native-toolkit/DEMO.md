@@ -569,7 +569,7 @@ vicar-native-toolkit/
 │       └── ...
 ├── workspace/              # Working directory (mounted to container)
 │   └── ...
-├── bootstrap.sh            # One-command setup
+├── Makefile                # One-command setup (make bootstrap)
 └── README.md
 ```
 
