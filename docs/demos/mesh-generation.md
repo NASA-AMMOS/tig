@@ -4,11 +4,10 @@ Mars 2020 NavCam stereo terrain reconstruction using VICAR MARS tools.
 
 ## Overview
 
-Three demos are available for generating 3D terrain meshes from Mars 2020 NavCam stereo images:
+Two demo scripts are available for generating 3D terrain meshes from Mars 2020 NavCam stereo images:
 
-1. **Full Pipeline** (`demo-mesh-generation-with-xyz.sh`) - Complete stereo correlation → XYZ → mesh
-2. **Quick Demo** (`demo-mesh-generation-complete.sh`) - Fast mesh generation from pre-computed XYZ
-3. **Native Toolkit** (`demo-mesh-native-toolkit.sh`) - Native-looking commands via vicar-native-toolkit
+1. **Full / Quick Pipeline** (`demo-mesh-generation-with-xyz.sh`) - Complete stereo correlation → XYZ → mesh, or a fast run from a pre-computed XYZ point cloud (`--xyz`)
+2. **Native Toolkit** (`demo-mesh-native-toolkit.sh`) - Native-looking commands via vicar-native-toolkit
 
 ## Demo 1: Full Pipeline with XYZ Calculation
 
@@ -70,13 +69,13 @@ Complete stereo mesh generation pipeline from raw stereo pair.
 - Subsampling: `x_subsample=2 y_subsample=2`
 - Gap filling: `maxgap=5`
 
-## Demo 2: Quick Mesh from Pre-computed XYZ
+## Quick Mode: Mesh from Pre-computed XYZ
 
-Fast demo using pre-computed XYZ point cloud from VISOR sample data.
+Fast run of the same script using a pre-computed XYZ point cloud (skips stereo correlation).
 
 ### What It Does
 
-1. **Copy XYZ** - Load pre-computed point cloud from VISOR
+1. **Load XYZ** - Use a pre-computed point cloud
 2. **Mesh Creation** (marsmesh) - Triangulate surface (~30 seconds)
 3. **Texture Conversion** (vicario) - VICAR to PNG (<1 second)
 
@@ -85,8 +84,10 @@ Fast demo using pre-computed XYZ point cloud from VISOR sample data.
 ### Usage
 
 ```bash
-# Run with defaults (uses VISOR sample data)
-./demo-mesh-generation-complete.sh
+# Fast run from a pre-computed XYZ point cloud
+./demo-mesh-generation-with-xyz.sh \
+  --xyz pointcloud.IMG \
+  --texture image.IMG
 ```
 
 **Output** (in `workspace/`):
@@ -102,9 +103,9 @@ Uses pre-computed NavCam XYZ from VISOR samples:
 - **XYZ:** `nlf_1835_0829848458_777xyz_n0874924ncam00230_0a02llj08.img`
 - **Texture:** `nlm_1835_0829848458_777fdr_n0874924ncam00230_0a02llj01.vic`
 
-VISOR (Visible Sightseeing Observables Repository) provides processed M2020 data products.
+VISOR (VICAR Institutional Stereo Observation Repository) provides processed M2020 data products.
 
-## Demo 3: Native Toolkit with vicar-native-toolkit
+## Demo 2: Native Toolkit with vicar-native-toolkit
 
 **NEW:** Demonstrates native-looking VICAR commands using the vicar-native-toolkit wrapper.
 
@@ -126,7 +127,7 @@ Commands look and feel like native binaries but transparently execute inside Doc
 
 - **Native appearance:** Commands execute from any directory in workspace
 - **Persistent container:** Long-running `vicar-sidecar` container (no startup overhead)
-- **Auto-discovery:** All 200+ VICAR commands automatically wrapped
+- **Auto-discovery:** All ~540 VICAR commands automatically wrapped
 - **Path transparency:** Relative paths work naturally
 - **direnv activation:** Toolkit auto-activates when entering directory
 
@@ -181,7 +182,7 @@ TOOL_NAME="marsmesh"
 CONTAINER_NAME="vicar-sidecar"
 WORKSPACE_ROOT="/path/to/workspace"
 REL_PATH="$(realpath --relative-to="${WORKSPACE_ROOT}" "${PWD}")"
-docker exec -i -w "/workspace/${REL_PATH}" "${CONTAINER_NAME}" "${TOOL_NAME}" "$@"
+docker exec -w "/workspace/${REL_PATH}" "${CONTAINER_NAME}" "${TOOL_NAME}" "$@"
 ```
 
 ### Toolkit Commands
@@ -278,16 +279,16 @@ export PARENT_MOUNT="/external"
 
 ## Comparison Matrix
 
-| Feature | Demo 1 (docker exec) | Demo 2 (Quick) | Demo 3 (Native Toolkit) |
-|---------|---------------------|----------------|-------------------------|
-| **Execution** | Temporary container | Temporary container | Persistent sidecar |
-| **Syntax** | `docker exec ...` | `docker exec ...` | `marsmesh ...` |
-| **Startup time** | ~5s per run | ~5s per run | ~2s first time, instant after |
-| **Cleanup** | Manual | Manual | Automatic (optional) |
-| **Use case** | One-off demos | Quick testing | Development, interactive use |
-| **Commands** | Manual `docker exec` | Manual `docker exec` | Native-looking wrappers |
-| **Path handling** | Absolute in container | Absolute in container | Transparent relative paths |
-| **Prerequisites** | Docker | Docker | Docker + direnv |
+| Feature | Demo 1 (docker exec) | Demo 2 (Native Toolkit) |
+|---------|---------------------|-------------------------|
+| **Execution** | Temporary container | Persistent sidecar |
+| **Syntax** | `docker exec ...` | `marsmesh ...` |
+| **Startup time** | ~5s per run | ~2s first time, instant after |
+| **Cleanup** | Manual | Automatic (optional) |
+| **Use case** | One-off demos | Development, interactive use |
+| **Commands** | Manual `docker exec` | Native-looking wrappers |
+| **Path handling** | Absolute in container | Transparent relative paths |
+| **Prerequisites** | Docker | Docker + direnv |
 
 ## Viewing Meshes
 
@@ -321,7 +322,7 @@ grep "^v " terrain.obj | awk '{print $2,$3,$4}' | \
 
 ## Troubleshooting
 
-### Demo 3 (Native Toolkit) Issues
+### Demo 2 (Native Toolkit) Issues
 
 **"direnv not allowed":**
 ```bash
@@ -392,4 +393,3 @@ cd .. && cd vicar-native-toolkit
 - [VICAR Documentation](https://github.com/NASA-AMMOS/VICAR)
 - [MARS Tools Overview](../architecture/components.md)
 - [vicar-native-toolkit README](../../vicar-native-toolkit/README.md)
-- [Docker Best Practices](../development/docker.md)

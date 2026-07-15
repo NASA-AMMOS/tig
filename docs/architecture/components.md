@@ -11,7 +11,7 @@ Overview of the Terrain Intelligence Generator system components.
 │  ┌─────────────┐  ┌──────────────┐  ┌──────────────┐  │
 │  │   VICAR     │  │  MARS Tools  │  │   Vicario    │  │
 │  │  Programs   │  │              │  │  (Java JAR)  │  │
-│  │  (700+)     │  │  marscorr    │  │              │  │
+│  │  (~540)     │  │  marscorr    │  │              │  │
 │  │             │  │  marscor3    │  │  Image       │  │
 │  │  gen        │  │  marsxyz     │  │  Converter   │  │
 │  │  label      │  │  marsmesh    │  │              │  │
@@ -69,8 +69,8 @@ XYZ Point Cloud (.IMG)
 ## Core Tools
 
 ### VICAR Programs
-- **Base**: 700+ image processing programs
-- **Location**: `/usr/local/vicar/bin/`
+- **Base**: Full VICAR image processing suite (~540 CLI wrappers on `PATH`)
+- **Location**: `/usr/local/bin/` (wrappers) → `/usr/local/vicar/dev/`
 - **Runtime**: TAE (Terminal Application Executive)
 
 ### MARS Tools
@@ -153,13 +153,13 @@ mars_calibration_m20/
 ### Image Layers
 
 ```
-Base Layer: Ubuntu 20.04
+Base Layer: Oracle Linux 8
     ↓
-VICAR Build Layer: Dependencies + VICAR source
+Builder Stage: downloads pre-built VICAR + external library releases
     ↓
-MARS Tools Layer: Compiled MARS programs
+Runtime Layer: VICAR binaries + MARS tools + Java + vicario.jar + calibration
     ↓
-Runtime Layer: Java + vicario.jar + calibration
+Command Wrappers: ~540 CLI wrappers generated under /usr/local/bin
     ↓
 Entry Point: Shell with VICAR environment
 ```
@@ -197,7 +197,7 @@ Entry Point: Shell with VICAR environment
 
 ### Disk Usage
 
-- **Container**: ~15GB
+- **Container**: ~3.1GB
 - **Per mesh output**: ~300MB (1280x960 input)
 - **Temporary files**: ~30MB (disparity maps)
 

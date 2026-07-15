@@ -10,8 +10,8 @@ TIG provides a Docker-based execution environment for generating 3D terrain mesh
 
 - **Stereo Correlation**: Generate disparity maps from stereo image pairs (marscorr, marscor3)
 - **3D Point Clouds**: Convert disparity to XYZ coordinates (marsxyz)
-- **Mesh Generation**: Create textured 3D surface meshes (marsmesh)
-- **Format Conversion**: Export to OBJ, OpenInventor, GLB formats
+- **Mesh Generation**: Create textured 3D surface meshes in OBJ / OpenInventor formats (marsmesh)
+- **Image Conversion**: Convert VICAR images to PNG / JPEG / TIFF (vicario)
 - **VISOR Calibration**: Integrates with VISOR (VICAR Institutional Stereo Observation Repository) containing M20 and many other open source mission calibrations
 - **Open Source**: Community-accessible VICAR-based terrain processing
 
@@ -79,7 +79,7 @@ A helper/wrapper script that provides native-like CLI usage for VICAR commands i
 📖 [Toolkit README](vicar-native-toolkit/README.md) | [Quick Reference](vicar-native-toolkit/docs/QUICKREF.md)
 
 ### Terrain Intelligence Generator
-Docker execution environment with pre-built demos and VISOR calibration integration for mesh generation.
+An optimized VICAR execution environment, packaged as a Docker image with the VICAR toolset and VISOR calibration integration for stereo processing and mesh generation.
 - 📁 `terrain-intelligence-generator/docker/`
 - 📖 [Getting Started](docs/getting-started.md)
 
@@ -119,8 +119,8 @@ Example workflows for stereo mesh generation.
 
 ```
 tig/
-├── demo-mesh-generation-with-xyz.sh    # Main demo script
-├── demo-mesh-generation.sh             # Full correlation pipeline
+├── demo-mesh-generation-with-xyz.sh    # Main demo script (stereo or pre-computed XYZ)
+├── demo-mesh-native-toolkit.sh         # Demo using the native toolkit wrappers
 ├── find-calibration.sh                 # Calibration helper
 ├── docs/                               # Documentation
 │   ├── demos/                          # Demo guides
@@ -130,8 +130,7 @@ tig/
 └── terrain-intelligence-generator/     # TIG Docker execution environment
     └── docker/
         ├── Dockerfile
-        ├── vicario.jar                 # Image converter
-        └── visor_calibration/          # VISOR calibration data
+        └── vicario.jar                 # Image converter
 ```
 
 ## Contributing
