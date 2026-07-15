@@ -125,11 +125,11 @@ chmod +x scripts/setup-linux.sh
 If using a custom build instead of the open-source image:
 
 ```bash
-chmod +x scripts/build-image.sh
-./scripts/build-image.sh
+chmod +x scripts/build-opensource-image.sh
+./scripts/build-opensource-image.sh
 ```
 
-This creates the `vicar-tools:latest` image with all dependencies installed.
+This creates the `vicar-native-toolkit:opensource` image with all dependencies installed.
 
 #### 3. Activate the Toolkit
 
@@ -182,14 +182,11 @@ vicar-native-toolkit/
 ├── .envrc                      # direnv config (auto-activates environment)
 ├── .envrc.local                # User configuration (gitignored, created by `make config`)
 ├── Makefile                    # Setup automation (make bootstrap / config / pull / ...)
-├── docker/
-│   ├── Dockerfile              # Container definition
-│   └── build-vicar.sh          # VICAR build script (runs inside container)
 ├── docker-compose.yml          # Alternative container management
 ├── scripts/
 │   ├── setup-macos.sh          # macOS dependency installer
 │   ├── setup-linux.sh          # Linux dependency installer
-│   └── build-image.sh          # Docker image builder
+│   └── build-opensource-image.sh # Docker image builder
 ├── workspace/                  # Your working directory (mounted to /workspace)
 └── .direnv/                    # Auto-generated (gitignored)
     ├── vicar-exec              # Universal command wrapper (generated)
@@ -311,47 +308,12 @@ toolkit-verify-calib
 
 See [MOUNTING-DATA.md](docs/MOUNTING-DATA.md) for detailed configuration options.
 
-## Building VICAR from Source
-
-If you have access to VICAR source code:
-
-### 1. Clone VICAR Repositories
-
-```bash
-cd /path/to/vicar-source
-git clone -b develop git@github.jpl.nasa.gov:MIPL/Vicar_dev.git
-git clone -b develop git@github.jpl.nasa.gov:MIPL/Vicar-tools-jpl.git
-git clone -b develop git@github.jpl.nasa.gov:MIPL/Vicar-tools-open.git
-# ... other repos
-```
-
-### 2. Mount Source in Container
-
-Edit `.envrc` and add source mount:
-
-```bash
-docker run -d \
-    --name "${CONTAINER_NAME}" \
-    -v "${WORKSPACE_ROOT}:/workspace" \
-    -v "/path/to/vicar-source:/usr/local/vicar/cmbld" \
-    ...
-```
-
-### 3. Build Inside Container
-
-```bash
-cd vicar-native-toolkit
-toolkit-build    # Runs build-vicar.sh inside container
-```
-
-The build process takes 30-60 minutes depending on your system.
-
 ## Troubleshooting
 
 ### "Docker image not found"
 
 ```bash
-./scripts/build-image.sh
+./scripts/build-opensource-image.sh
 ```
 
 ### "Container vicar-toolkit is not running"
@@ -416,10 +378,10 @@ Each can use the same Docker image but different workspace mounts.
 
 ### Custom Build Configuration
 
-To customize the VICAR build, edit `docker/build-vicar.sh` and rebuild:
+To customize the VICAR build, edit `docker/Dockerfile` and rebuild:
 
 ```bash
-./scripts/build-image.sh
+./scripts/build-opensource-image.sh
 ```
 
 ### Network Services
