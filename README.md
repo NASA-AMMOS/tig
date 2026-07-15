@@ -23,7 +23,7 @@ Get native-like VICAR commands in one step:
 
 ```bash
 cd vicar-native-toolkit
-./bootstrap.sh
+make bootstrap
 # ✓ Pulls Docker image
 # ✓ Starts container  
 # ✓ Creates ~550 command wrappers
@@ -69,10 +69,10 @@ meshlab workspace/terrain.obj
 ### VICAR Native Toolkit
 
 A helper/wrapper script that provides native-like CLI usage for VICAR commands inside the TIG Docker execution environment. Features:
-- ✨ **One-command setup** via `bootstrap.sh`
+- ✨ **One-command setup** via `make bootstrap`
 - 🚀 **Fast activation** (~1 second, symlink-based wrappers)
 - 🔧 **Auto-discovers** ~550 VICAR commands
-- 🐳 **Custom image support** via `--image` flag
+- 🐳 **Custom image support** via `IMAGE=` variable
 - 📊 **VISOR calibration mounting** for terrain processing
 
 📁 `vicar-native-toolkit/`  
