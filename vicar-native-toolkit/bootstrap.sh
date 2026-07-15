@@ -177,7 +177,9 @@ echo ""
 # ===== Pull Image =====
 if [[ "${CONFIG_ONLY}" == "false" ]]; then
     echo "Pulling container image..."
-    if docker pull "${CONTAINER_IMAGE}"; then
+    # Image is published for linux/amd64 only. Force that platform so pulls
+    # succeed on Apple Silicon / arm64 hosts (runs via emulation).
+    if docker pull --platform linux/amd64 "${CONTAINER_IMAGE}"; then
         log_info "Image pulled successfully"
     else
         log_error "Failed to pull image"
