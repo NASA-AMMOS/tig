@@ -72,10 +72,10 @@ The easiest way to get started:
 
 ```bash
 cd vicar-native-toolkit
-./bootstrap.sh
+make bootstrap
 ```
 
-This single script:
+This single target:
 - ✓ Checks prerequisites (Docker, direnv)
 - ✓ Pulls the open-source VICAR container image
 - ✓ Creates configuration files
@@ -83,15 +83,15 @@ This single script:
 
 **With MARS calibration:**
 ```bash
-./bootstrap.sh --mars-calib /path/to/mars_calibration_m20
+make bootstrap MARS_CALIB=/path/to/mars_calibration_m20
 ```
 
 **With custom image:**
 ```bash
-./bootstrap.sh --image myregistry/vicar:custom
+make bootstrap IMAGE=myregistry/vicar:custom
 ```
 
-See `./bootstrap.sh --help` for all options.
+See `make help` for all targets and variables.
 
 ### Manual Setup (Advanced)
 
@@ -180,8 +180,8 @@ The container keeps running in the background. Re-entering the directory makes t
 ```
 vicar-native-toolkit/
 ├── .envrc                      # direnv config (auto-activates environment)
-├── .envrc.local                # User configuration (gitignored, created by bootstrap)
-├── bootstrap.sh                # Automated setup script (NEW)
+├── .envrc.local                # User configuration (gitignored, created by `make config`)
+├── Makefile                    # Setup automation (make bootstrap / config / pull / ...)
 ├── docker/
 │   ├── Dockerfile              # Container definition
 │   └── build-vicar.sh          # VICAR build script (runs inside container)
@@ -240,24 +240,28 @@ vicar-native-toolkit/
 
 ## Configuration
 
-Configuration is managed through `.envrc.local` (created by `bootstrap.sh` or manually).
+Configuration is managed through `.envrc.local` (created by `make config` or manually).
 
-### Using bootstrap.sh
+### Using the Makefile
 
 The easiest way to configure:
 
 ```bash
-# Default configuration
-./bootstrap.sh --config-only
+# Default configuration (no image pull)
+make config
 
 # Custom image
-./bootstrap.sh --config-only --image myregistry/vicar:v2.0
+make config IMAGE=myregistry/vicar:v2.0
 
 # With MARS calibration
-./bootstrap.sh --config-only --mars-calib /data/mars_calibration_m20
+make config MARS_CALIB=/data/mars_calibration_m20
 
 # Custom container name
-./bootstrap.sh --config-only --container my-vicar-container
+make config CONTAINER=my-vicar-container
+
+# M20 image (also disables SELinux labeling)
+make config IMAGE=terrain-intelligence-generator:m20 \
+            MARS_CALIB=/data/mars_calibration_m20 DISABLE_SELINUX=1
 ```
 
 ### Manual Configuration

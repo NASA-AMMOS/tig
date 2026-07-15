@@ -8,7 +8,7 @@ git clone https://github.com/NASA-AMMOS/tig.git
 cd tig/vicar-native-toolkit
 
 # One-command bootstrap
-./bootstrap.sh
+make bootstrap
 
 # That's it! VICAR commands now available
 gen out=test.img nl=10 ns=10
@@ -17,15 +17,15 @@ toolkit-status
 
 **With MARS calibration:**
 ```bash
-./bootstrap.sh --mars-calib /path/to/mars_calibration_m20
+make bootstrap MARS_CALIB=/path/to/mars_calibration_m20
 ```
 
 **Custom image:**
 ```bash
-./bootstrap.sh --image myregistry/vicar:custom
+make bootstrap IMAGE=myregistry/vicar:custom
 ```
 
-See `./bootstrap.sh --help` for all options.
+See `make help` for all targets.
 
 ## Pull & Run (Docker Only)
 
@@ -134,7 +134,7 @@ which label                    # /usr/local/bin/label
 cat .envrc.local
 
 # Reconfigure
-./bootstrap.sh --config-only --image new-image:tag
+make config IMAGE=new-image:tag
 
 # Reload configuration
 direnv allow
