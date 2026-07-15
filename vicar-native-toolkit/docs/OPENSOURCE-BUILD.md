@@ -1,6 +1,6 @@
 # VICAR Native Toolkit - Open Source Build
 
-This directory contains the open-source build of the VICAR Native Toolkit, which builds VICAR from the public GitHub repository without requiring access to JPL internal resources.
+This directory contains the open-source build of the VICAR Native Toolkit, which uses VICAR binaries published on the public GitHub repository, without requiring access to any internal resources.
 
 ## Quick Start
 
@@ -10,16 +10,16 @@ The easiest way to get started is to use the pre-built image:
 
 ```bash
 # Pull the latest open-source build
-docker pull ghcr.io/nasa-ammos/tig/vicar-native-toolkit:opensource
+docker pull ghcr.io/nasa-ammos/tig/terrain-intelligence-generator:opensource
 
 # Run interactively
 docker run -it --rm \
   -v $(pwd)/workspace:/workspace \
-  ghcr.io/nasa-ammos/tig/vicar-native-toolkit:opensource \
+  ghcr.io/nasa-ammos/tig/terrain-intelligence-generator:opensource \
   bash
 
 # Test VICAR commands
-docker run --rm ghcr.io/nasa-ammos/tig/vicar-native-toolkit:opensource label --help
+docker run --rm ghcr.io/nasa-ammos/tig/terrain-intelligence-generator:opensource label --help
 ```
 
 ### Building Locally
@@ -27,11 +27,11 @@ docker run --rm ghcr.io/nasa-ammos/tig/vicar-native-toolkit:opensource label --h
 If you want to build the image yourself:
 
 ```bash
-# Build with default settings (latest VICAR main branch)
+# Build with default settings (VICAR 5.0 release)
 ./scripts/build-opensource-image.sh
 
 # Build with specific VICAR version
-VICAR_VERSION=v3.0 ./scripts/build-opensource-image.sh
+VICAR_VERSION=5.0 ./scripts/build-opensource-image.sh
 
 # Build with custom image name
 IMAGE_NAME=my-vicar IMAGE_TAG=latest ./scripts/build-opensource-image.sh
@@ -50,14 +50,14 @@ The open-source build includes:
   - Supporting libraries (olb)
   
 - **Runtime Environment**
-  - Rocky Linux 8 (RHEL-compatible)
+  - Oracle Linux 8 (RHEL-compatible)
   - Python 3.9
   - X11 libraries for GUI applications
   - Java 8 runtime
   - Image processing libraries (libtiff, libpng, libjpeg)
 
 - **Wrapper Scripts**
-  - ~200+ command-line wrappers in `/usr/local/bin`
+  - ~540 command-line wrappers in `/usr/local/bin`
   - Automatic environment setup
   - Pre-configured library paths
 
@@ -65,30 +65,18 @@ The open-source build includes:
 
 The build uses a multi-stage Dockerfile:
 
-1. **Builder Stage** (`rockylinux:8`)
+1. **Builder Stage** (`oraclelinux:8`)
    - Installs all build dependencies
-   - Clones VICAR from GitHub
+   - Downloads pre-built VICAR binaries from GitHub releases
    - Downloads pre-built external libraries
-   - Compiles VICAR from source
-   
-2. **Runtime Stage** (`rockylinux:8`)
+
+2. **Runtime Stage** (`oraclelinux:8`)
    - Minimal runtime dependencies only
-   - Copies built VICAR from builder
+   - Copies VICAR binaries from builder
    - Creates wrapper scripts
    - Sets up environment
 
 This approach keeps the final image size reasonable while ensuring a clean build.
-
-## Differences from Internal Builds
-
-| Feature | Open Source Build | Internal Build (with-rpms) |
-|---------|------------------|---------------------------|
-| Source | GitHub (public) | JPL Artifactory (internal) |
-| VICAR Version | Open source components only | May include mission-specific tools |
-| Build Method | Compile from source | Pre-built RPM packages |
-| Build Time | 30-60 minutes | 5-10 minutes |
-| JPL Certificates | Not required | Required |
-| Access | Public | JPL network required |
 
 ## Configuration
 
@@ -96,7 +84,7 @@ This approach keeps the final image size reasonable while ensuring a clean build
 
 The Dockerfile accepts these build arguments:
 
-- `VICAR_VERSION` (default: `main`) - Git branch or tag to build
+- `VICAR_VERSION` (default: `5.0`) - Release version to download
 - `EXTERNAL_VERSION` (default: `5.0`) - VICAR externals package version
 - `EXTERNAL_FILE` (default: `vicar_open_ext_x86-64-linx_5.0.tar.gz`) - Externals tarball name
 
@@ -104,9 +92,9 @@ Example with custom arguments:
 
 ```bash
 docker build \
-  -f docker/Dockerfile \
-  -t vicar-native-toolkit:v3.0 \
-  --build-arg VICAR_VERSION=v3.0 \
+  -f ../terrain-intelligence-generator/docker/Dockerfile \
+  -t vicar-native-toolkit:5.0 \
+  --build-arg VICAR_VERSION=5.0 \
   --build-arg EXTERNAL_VERSION=5.0 \
   .
 ```
@@ -115,7 +103,7 @@ docker build \
 
 The container sets these environment variables:
 
-- `V2TOP=/usr/local/vicar/vos` - VICAR installation directory
+- `V2TOP=/usr/local/vicar/dev` - VICAR installation directory
 - `WORKSPACE=/usr/local/vicar` - Working directory
 - `VICSYS=DEVELOPMENT` - VICAR system type
 - `LD_LIBRARY_PATH` - Includes all VICAR and external libraries
@@ -128,7 +116,7 @@ The container sets these environment variables:
 ```bash
 docker run -it --rm \
   -v $(pwd)/data:/workspace \
-  ghcr.io/nasa-ammos/tig/vicar-native-toolkit:opensource \
+  ghcr.io/nasa-ammos/tig/terrain-intelligence-generator:opensource \
   bash
 ```
 
@@ -149,13 +137,13 @@ list output.vic
 # Generate test image
 docker run --rm \
   -v $(pwd)/data:/workspace \
-  ghcr.io/nasa-ammos/tig/vicar-native-toolkit:opensource \
+  ghcr.io/nasa-ammos/tig/terrain-intelligence-generator:opensource \
   gen /workspace/test.vic 512 512
 
 # Display label
 docker run --rm \
   -v $(pwd)/data:/workspace \
-  ghcr.io/nasa-ammos/tig/vicar-native-toolkit:opensource \
+  ghcr.io/nasa-ammos/tig/terrain-intelligence-generator:opensource \
   label /workspace/test.vic
 ```
 
@@ -173,7 +161,7 @@ docker run -it --rm \
   -v /tmp/.X11-unix:/tmp/.X11-unix \
   -e DISPLAY=$DISPLAY \
   --network host \
-  ghcr.io/nasa-ammos/tig/vicar-native-toolkit:opensource \
+  ghcr.io/nasa-ammos/tig/terrain-intelligence-generator:opensource \
   bash
 
 # Run GUI tools
@@ -193,7 +181,7 @@ xhost +localhost
 docker run -it --rm \
   -v $(pwd)/data:/workspace \
   -e DISPLAY=host.docker.internal:0 \
-  ghcr.io/nasa-ammos/tig/vicar-native-toolkit:opensource \
+  ghcr.io/nasa-ammos/tig/terrain-intelligence-generator:opensource \
   bash
 ```
 
@@ -275,7 +263,7 @@ To trigger a manual build:
 
 ## Image Tags
 
-Available on `ghcr.io/nasa-ammos/tig/vicar-native-toolkit`:
+Available on `ghcr.io/nasa-ammos/tig/terrain-intelligence-generator`:
 
 - `:opensource` - Latest open-source build from main branch
 - `:latest` - Latest stable release

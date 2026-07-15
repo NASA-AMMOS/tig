@@ -6,45 +6,20 @@
 # Container name (must be unique if running multiple instances)
 CONTAINER_NAME="vicar-sidecar"
 
-# Docker image to use (examples below)
-CONTAINER_IMAGE="vicar-tools:with-rpms"
+# Docker image to use
+CONTAINER_IMAGE="ghcr.io/nasa-ammos/tig/terrain-intelligence-generator:opensource"
 
 # Options:
-#   vicar-tools:local-binaries  - Built from source (development)
-#   vicar-tools:with-rpms       - M20-G87 RPM build
-#   vicar-tools:tig-demo        - With Python dependencies
-#   vicar-tools:latest          - Latest build
-#   custom-image:tag            - Your custom image
+#   ghcr.io/nasa-ammos/tig/terrain-intelligence-generator:opensource  - Published image
+#   custom-image:tag                                                  - Your custom image
 
 # ===== VICAR Installation Paths (inside container) =====
-# These vary by image type - configure based on your image
-
-# For RPM-based images (vicar-tools:with-rpms, vicar-tools:tig-demo):
-VICAR_INSTALL_PREFIX="/usr/local/vicar/m20-g87"
+# Configure based on your image layout. Defaults below match the
+# published opensource image.
+VICAR_INSTALL_PREFIX="/usr/local/vicar/dev"
 VICAR_BIN_PATHS=(
     "/usr/local/bin"
-    "${VICAR_INSTALL_PREFIX}/p2/lib/x86-64-linx"
-    "${VICAR_INSTALL_PREFIX}/mars/lib/x86-64-linx"
-    "${VICAR_INSTALL_PREFIX}/tae53/bin/x86_64_linx"
 )
-VICAR_LIB_PATHS=(
-    "${VICAR_INSTALL_PREFIX}/olb/x86-64-linx"
-    "${VICAR_INSTALL_PREFIX}/mars/lib/x86-64-linx"
-)
-
-# For source-built images (vicar-tools:local-binaries):
-# VICAR_INSTALL_PREFIX="/usr/local/vicar/dev"
-# VICAR_BIN_PATHS=(
-#     "${VICAR_INSTALL_PREFIX}/p1/lib/x86-64-linx"
-#     "${VICAR_INSTALL_PREFIX}/p2/lib/x86-64-linx"
-#     "${VICAR_INSTALL_PREFIX}/p3/lib/x86-64-linx"
-#     "${VICAR_INSTALL_PREFIX}/mars/lib/x86-64-linx"
-#     "${VICAR_INSTALL_PREFIX}/tae53/bin/x86_64_linx"
-# )
-# VICAR_LIB_PATHS=(
-#     "${VICAR_INSTALL_PREFIX}/olb/x86-64-linx"
-#     "${VICAR_INSTALL_PREFIX}/html/lib/x86-64-linx"
-# )
 
 # ===== Environment Variables (inside container) =====
 # Set environment variables that VICAR/Mars tools need
@@ -63,7 +38,7 @@ VICAR_ENV_VARS=(
 WORKSPACE_ROOT="${PWD}/workspace"
 
 # ===== MARS Calibration (Camera Models & Flat Fields) =====
-# Uncomment and set to mount M2020 calibration data
+# Uncomment and set to mount mission calibration data
 # This should point to a directory containing:
 #   - camera_models/ (*.cahvor, *.cahvore files)
 #   - flat_fields/ (*.IMG radiometric correction files)
@@ -71,8 +46,7 @@ WORKSPACE_ROOT="${PWD}/workspace"
 #
 # Examples:
 # MARS_CONFIG_PATH="${HOME}/.mars_calib"
-# MARS_CONFIG_PATH="/opt/mars_calibration_m20"
-# MARS_CONFIG_PATH="${PWD}/../terrain-intelligence-generator/docker/mars_calibration_m20"
+# MARS_CONFIG_PATH="/opt/mars_calibration"
 #
 # If not set, container will start without calibration data.
 # MARS tools will fail if they require camera models.
