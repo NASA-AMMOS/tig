@@ -154,6 +154,10 @@ echo ""
 
 cd "$TOOLKIT_DIR"
 
+# Trust the toolkit directory. Writing .envrc.local above invalidates any prior
+# `direnv allow`, so re-allow here to guarantee a reliable first run.
+direnv allow . 2>/dev/null || true
+
 # Load direnv environment
 # Note: If direnv is blocked, the stderr will contain "is blocked" message
 DIRENV_STDERR=$(mktemp)
