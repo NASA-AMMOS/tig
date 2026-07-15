@@ -384,7 +384,7 @@ CONTAINER_NAME="vicar-sidecar"
 CONTAINER_IMAGE="ghcr.io/nasa-ammos/tig/terrain-intelligence-generator:opensource"
 
 # MARS calibration (required for stereo processing)
-MARS_CONFIG_PATH="/path/to/mars_calibration_m20"
+MARS_CONFIG_PATH="/path/to/mars_calibration"
 ```
 
 Then reload:
@@ -478,15 +478,9 @@ marsmesh inp=../data/pointcloud.xyz out=terrain.obj
 
 ## Performance Tips
 
-### macOS Apple Silicon Optimization
+### macOS Apple Silicon
 
-**For M1/M2/M3 Macs:** Enable Rosetta 2 for dramatically faster processing:
-
-- **Without optimization:** 10-15 minutes for full pipeline
-- **With Rosetta 2:** ~4 minutes for full pipeline
-- **Improvement:** 4-6x faster
-
-See [macOS ARM64 Optimization Guide](docs/MACOS-ARM64-OPTIMIZATION.md) for setup instructions.
+**For M1/M2/M3 Macs:** The published image is `linux/amd64` only, so the container runs under Docker's emulation. The toolkit forces `--platform linux/amd64` automatically. Expect the full pipeline to take longer than on a native amd64 Linux host due to emulation overhead.
 
 ### Speed Comparison
 
@@ -579,7 +573,7 @@ vicar-native-toolkit/
 Host                                    Container
 ----                                    ---------
 vicar-native-toolkit/workspace/    →    /workspace
-/path/to/mars_calibration_m20/     →    /mars_config
+/path/to/mars_calibration/     →    /mars_config
 ```
 
 ## Example Workflows
@@ -691,7 +685,6 @@ echo $PATH
 - **[Configuration Guide](docs/CONFIGURATION.md)** - Advanced setup options
 - **[Mounting Data](docs/MOUNTING-DATA.md)** - Volume mount configuration
 - **[Open Source Build](docs/OPENSOURCE-BUILD.md)** - Build from source
-- **[macOS ARM64 Optimization](docs/MACOS-ARM64-OPTIMIZATION.md)** - Speed up on Apple Silicon (4-6x faster)
 
 ## Key Takeaways
 

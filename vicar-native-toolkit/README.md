@@ -1,6 +1,6 @@
 # VICAR Native Toolkit
 
-Make ~200 VICAR CLI programs living inside a Docker container feel like native commands on your host machine. When you activate the environment, the container starts, directories mount, X11 routing is established, and every command "just works" as if installed locally.
+Make 540+ VICAR CLI programs living inside a Docker container feel like native commands on your host machine. When you activate the environment, the container starts, directories mount, X11 routing is established, and every command "just works" as if installed locally.
 
 **Works on both Linux (bash) and macOS (zsh), including Apple Silicon (M1/M2).**
 
@@ -9,7 +9,6 @@ Make ~200 VICAR CLI programs living inside a Docker container feel like native c
 This toolkit provides multiple ways to run VICAR:
 
 - **Open Source Build** (Recommended for public use) - Builds VICAR from the public GitHub repository. See [OPENSOURCE-BUILD.md](docs/OPENSOURCE-BUILD.md) for details.
-- **Pre-built RPMs** (JPL Internal) - Uses pre-built RPM packages from JPL Artifactory
 - **Local Binaries** - Uses locally compiled VICAR binaries
 
 For most users, the **open-source build** is recommended. It requires no special access and builds directly from the [NASA-AMMOS/VICAR](https://github.com/NASA-AMMOS/VICAR) repository.
@@ -26,7 +25,7 @@ This project implements the docker-native-wrapper pattern using:
 
 ### Wrapper Architecture
 
-Instead of generating 500+ individual wrapper scripts, the toolkit uses a symlink-based approach:
+Instead of generating 540+ individual wrapper scripts, the toolkit uses a symlink-based approach:
 
 1. **Single wrapper script** (`vicar-exec`) - Handles all VICAR commands
 2. **Command detection** - Auto-discovers available commands from container
@@ -45,8 +44,8 @@ Instead of generating 500+ individual wrapper scripts, the toolkit uses a symlin
 - **vs. docker run**: 10-30x faster than per-command containers
 - **vs. native**: Slight overhead, but allows consistent environment across platforms
 
-**macOS Apple Silicon Optimization:**
-For M1/M2/M3 Macs, enable Rosetta 2 for 4-6x faster processing. See [macOS ARM64 Optimization Guide](docs/MACOS-ARM64-OPTIMIZATION.md) for details.
+**macOS Apple Silicon:**
+The published image is `linux/amd64` only, so on M1/M2/M3 Macs the container runs under Docker's emulation. The toolkit forces `--platform linux/amd64` automatically, so no manual configuration is needed.
 
 ## Prerequisites
 
@@ -83,7 +82,7 @@ This single target:
 
 **With MARS calibration:**
 ```bash
-make bootstrap MARS_CALIB=/path/to/mars_calibration_m20
+make bootstrap MARS_CALIB=/path/to/mars_calibration
 ```
 
 **With custom image:**
@@ -251,14 +250,14 @@ make config
 make config IMAGE=myregistry/vicar:v2.0
 
 # With MARS calibration
-make config MARS_CALIB=/data/mars_calibration_m20
+make config MARS_CALIB=/data/mars_calibration
 
 # Custom container name
 make config CONTAINER=my-vicar-container
 
-# M20 image (also disables SELinux labeling)
-make config IMAGE=terrain-intelligence-generator:m20 \
-            MARS_CALIB=/data/mars_calibration_m20 DISABLE_SELINUX=1
+# Disable SELinux labeling (Linux; needed by some images)
+make config IMAGE=myregistry/vicar:v2.0 \
+            MARS_CALIB=/data/mars_calibration DISABLE_SELINUX=1
 ```
 
 ### Manual Configuration
@@ -271,7 +270,7 @@ CONTAINER_NAME="vicar-sidecar"
 CONTAINER_IMAGE="ghcr.io/nasa-ammos/tig/terrain-intelligence-generator:opensource"
 
 # MARS calibration (optional)
-MARS_CONFIG_PATH="/path/to/mars_calibration_m20"
+MARS_CONFIG_PATH="/path/to/mars_calibration"
 ```
 
 After creating/editing `.envrc.local`:
@@ -296,7 +295,7 @@ For MARS processing tools (marsmap, marsmos, etc.), mount calibration files:
 
 ```bash
 # Set environment variable
-export MARS_CONFIG_PATH="/path/to/mars_calibration_m20"
+export MARS_CONFIG_PATH="/path/to/mars_calibration"
 
 # Restart container
 cd vicar-native-toolkit
@@ -316,7 +315,7 @@ See [MOUNTING-DATA.md](docs/MOUNTING-DATA.md) for detailed configuration options
 ./scripts/build-opensource-image.sh
 ```
 
-### "Container vicar-toolkit is not running"
+### "Container vicar-sidecar is not running"
 
 ```bash
 toolkit-restart
@@ -378,7 +377,7 @@ Each can use the same Docker image but different workspace mounts.
 
 ### Custom Build Configuration
 
-To customize the VICAR build, edit `docker/Dockerfile` and rebuild:
+To customize the VICAR build, edit the image Dockerfile at `../terrain-intelligence-generator/docker/Dockerfile` and rebuild:
 
 ```bash
 ./scripts/build-opensource-image.sh
@@ -431,18 +430,18 @@ This project is based on the docker-native-wrapper pattern. To contribute:
 
 ## License
 
-[Add your license here]
+Apache License 2.0. See the [LICENSE](../LICENSE) file at the repository root.
 
 ## Credits
 
-Architecture based on research documented in `docker-native-wrapper-research-v2.md`.
+Architecture based on the docker-native-wrapper pattern (long-running sidecar container + symlinked universal `vicar-exec` wrapper).
 
 ## Support
 
 For issues:
 1. Check the Troubleshooting section above
 2. Verify Docker and direnv are properly installed
-3. Check container logs: `docker logs vicar-toolkit`
+3. Check container logs: `docker logs vicar-sidecar`
 4. Open an issue with platform details (OS, Docker version, error messages)
 
 ---
