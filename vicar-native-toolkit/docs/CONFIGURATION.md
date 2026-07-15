@@ -23,7 +23,7 @@ make bootstrap
 make bootstrap IMAGE=myregistry/vicar:v2.0
 
 # With MARS calibration
-make bootstrap MARS_CALIB=/path/to/mars_calibration_m20
+make bootstrap MARS_CALIB=/path/to/mars_calibration
 
 # Custom container name
 make bootstrap CONTAINER=my-vicar
@@ -102,7 +102,7 @@ Mount calibration files for Mars processing tools:
 
 ```bash
 # Path to Mars calibration data on host
-MARS_CONFIG_PATH="/path/to/mars_calibration_m20"
+MARS_CONFIG_PATH="/path/to/mars_calibration"
 
 # Will be mounted at /usr/local/vicar/mars_calib in container
 # and MARS_CONFIG_PATH env var set inside container
@@ -110,7 +110,7 @@ MARS_CONFIG_PATH="/path/to/mars_calibration_m20"
 
 **Using the Makefile:**
 ```bash
-make bootstrap MARS_CALIB=/path/to/mars_calibration_m20
+make bootstrap MARS_CALIB=/path/to/mars_calibration
 ```
 
 **Verify after activation:**
@@ -190,29 +190,13 @@ MANUAL_TOOLS=(
 
 ## Example Configurations
 
-### M20-G87 RPM Build (Default)
+### Open Source Image (Default)
 
 ```bash
-CONTAINER_IMAGE="vicar-tools:tig-demo"
-VICAR_INSTALL_PREFIX="/usr/local/vicar/m20-g87"
-VICAR_BIN_PATHS=(
-    "/usr/local/bin"
-    "${VICAR_INSTALL_PREFIX}/p2/lib/x86-64-linx"
-    "${VICAR_INSTALL_PREFIX}/mars/lib/x86-64-linx"
-)
-AUTO_DISCOVER_TOOLS=true
-```
-
-### Source-Built Development Image
-
-```bash
-CONTAINER_IMAGE="vicar-tools:local-binaries"
+CONTAINER_IMAGE="ghcr.io/nasa-ammos/tig/terrain-intelligence-generator:opensource"
 VICAR_INSTALL_PREFIX="/usr/local/vicar/dev"
 VICAR_BIN_PATHS=(
-    "${VICAR_INSTALL_PREFIX}/p1/lib/x86-64-linx"
-    "${VICAR_INSTALL_PREFIX}/p2/lib/x86-64-linx"
-    "${VICAR_INSTALL_PREFIX}/p3/lib/x86-64-linx"
-    "${VICAR_INSTALL_PREFIX}/mars/lib/x86-64-linx"
+    "/usr/local/bin"
 )
 AUTO_DISCOVER_TOOLS=true
 ```
@@ -277,7 +261,7 @@ cd .. && cd -
 
 ```bash
 # Save current config
-cp .envrc.local .envrc.local.m20-g87
+cp .envrc.local .envrc.local.prod
 
 # Load different config
 cp .envrc.local.dev .envrc.local
@@ -304,7 +288,7 @@ direnv allow
 ```bash
 docker pull your-image:tag
 # Or build it
-./scripts/build-tig-demo-image.sh
+./scripts/build-opensource-image.sh
 ```
 
 ### "Commands not found"
@@ -340,8 +324,8 @@ ls /usr/local/bin/
 
 ```bash
 VICAR_ENV_VARS=(
-    "V2TOP=/usr/local/vicar/m20-g87"
-    "R2LIB=/usr/local/vicar/m20-g87"
+    "V2TOP=/usr/local/vicar/dev"
+    "R2LIB=/usr/local/vicar/dev"
     "CUSTOM_VAR=value"
     "PATH=/custom/path:\$PATH"
 )
@@ -381,7 +365,7 @@ fi
 
 Old (hardcoded):
 ```bash
-CONTAINER_IMAGE="vicar-tools:with-rpms"
+CONTAINER_IMAGE="ghcr.io/nasa-ammos/tig/terrain-intelligence-generator:opensource"
 # Paths hardcoded in script
 ```
 
@@ -391,7 +375,7 @@ New (configurable):
 cp .envrc.config.example .envrc.local
 
 # Set your image
-CONTAINER_IMAGE="vicar-tools:with-rpms"
+CONTAINER_IMAGE="ghcr.io/nasa-ammos/tig/terrain-intelligence-generator:opensource"
 
 # Configure paths for your image
 VICAR_INSTALL_PREFIX="/usr/local/vicar/dev"
@@ -412,15 +396,13 @@ VICAR_BIN_PATHS=(...)
 
 | Image | Prefix | Commands Location |
 |-------|--------|-------------------|
-| `vicar-tools:tig-demo` | `/usr/local/vicar/m20-g87` | `/usr/local/bin` + `$PREFIX/p2/lib/...` |
-| `vicar-tools:with-rpms` | `/usr/local/vicar/m20-g87` | `/usr/local/bin` + `$PREFIX/p2/lib/...` |
-| `vicar-tools:local-binaries` | `/usr/local/vicar/dev` | `$PREFIX/p2/lib/x86-64-linx` |
+| `terrain-intelligence-generator:opensource` | `/usr/local/vicar/dev` | `/usr/local/bin` |
 
 ### Common Environment Variables
 
 | Variable | Purpose | Example |
 |----------|---------|---------|
-| `V2TOP` | VICAR installation root | `/usr/local/vicar/m20-g87` |
+| `V2TOP` | VICAR installation root | `/usr/local/vicar/dev` |
 | `R2LIB` | Mars tools library | Same as V2TOP |
 | `VICAR_PARAM` | Parameter files | `/project/calibration/param_files` |
 | `VICAR_CALIB` | Calibration data | `/project/calibration` |

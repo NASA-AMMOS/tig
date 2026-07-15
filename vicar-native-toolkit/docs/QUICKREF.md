@@ -17,7 +17,7 @@ toolkit-status
 
 **With MARS calibration:**
 ```bash
-make bootstrap MARS_CALIB=/path/to/mars_calibration_m20
+make bootstrap MARS_CALIB=/path/to/mars_calibration
 ```
 
 **Custom image:**
@@ -96,7 +96,7 @@ docker run -it --rm \
   -v /tmp/.X11-unix:/tmp/.X11-unix \
   -e DISPLAY=$DISPLAY \
   --network host \
-  ghcr.io/nasa-ammos/tig/vicar-native-toolkit:opensource \
+  ghcr.io/nasa-ammos/tig/terrain-intelligence-generator:opensource \
   bash
 
 # Inside container, run GUI apps
@@ -113,7 +113,7 @@ xhost +localhost
 docker run -it --rm \
   -v $(pwd)/data:/workspace \
   -e DISPLAY=host.docker.internal:0 \
-  ghcr.io/nasa-ammos/tig/vicar-native-toolkit:opensource \
+  ghcr.io/nasa-ammos/tig/terrain-intelligence-generator:opensource \
   bash
 ```
 
@@ -121,7 +121,7 @@ docker run -it --rm \
 
 ```bash
 # Inside container
-echo $V2TOP                    # /usr/local/vicar/vos
+echo $V2TOP                    # /usr/local/vicar/dev
 echo $LD_LIBRARY_PATH          # VICAR library paths
 ls /usr/local/bin | head -20   # Available wrappers
 which label                    # /usr/local/bin/label

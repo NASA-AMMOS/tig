@@ -69,7 +69,7 @@ cd ../../vicar-native-toolkit
 ```
 ✅ Build successful!
 Image created: terrain-intelligence-generator:opensource
-Size: ~1.85GB
+Size: ~3.12GB
 ```
 
 **Time:** ~3-5 minutes
@@ -81,7 +81,7 @@ docker images | grep terrain-intelligence-generator:opensource
 
 Should show:
 ```
-terrain-intelligence-generator:opensource    latest    <image-id>    1.85GB
+terrain-intelligence-generator:opensource    latest    <image-id>    3.12GB
 ```
 
 ---
@@ -94,7 +94,7 @@ The toolkit comes with a default configuration. You can create a local config:
 cat > .envrc.local << 'EOF'
 # Local configuration for vicar-native-toolkit
 export CONTAINER_IMAGE="terrain-intelligence-generator:opensource"
-export MARS_CONFIG_PATH="../terrain-intelligence-generator/docker/mars_calibration_m20"
+export MARS_CONFIG_PATH="/path/to/mars_calibration"
 EOF
 ```
 

@@ -13,7 +13,7 @@ Set `MARS_CONFIG_PATH` to point to your calibration directory:
 export MARS_CONFIG_PATH="${HOME}/.mars_calib"
 
 # Or set temporarily
-export MARS_CONFIG_PATH="/path/to/mars_calibration_m20"
+export MARS_CONFIG_PATH="/path/to/mars_calibration"
 ```
 
 ### 2. Restart Container
@@ -100,7 +100,7 @@ direnv allow
 Your calibration directory should contain:
 
 ```
-mars_calibration_m20/
+mars_calibration/
 ├── camera_models/
 │   ├── *.cahvor     # Camera geometry files
 │   └── *.cahvore    # Extended camera models
@@ -117,14 +117,14 @@ MARS tools (marsmap, marsmos, marsmesh) automatically discover files from these 
 ### When MARS_CONFIG_PATH is Set and Valid
 
 ```bash
-export MARS_CONFIG_PATH="/opt/mars_calibration_m20"
+export MARS_CONFIG_PATH="/opt/mars_calibration"
 ```
 
 **Result:**
-- Host path: `/opt/mars_calibration_m20`
+- Host path: `/opt/mars_calibration`
 - Container path: `/usr/local/vicar/mars_calib` (read-only)
 - Container environment: `MARS_CONFIG_PATH=/usr/local/vicar/mars_calib`
-- Log: `[vicar-toolkit] Mounting MARS calibration: /opt/mars_calibration_m20`
+- Log: `[vicar-toolkit] Mounting MARS calibration: /opt/mars_calibration`
 
 ### When MARS_CONFIG_PATH is Set but Directory Missing
 
@@ -181,7 +181,7 @@ If you have the terrain-intelligence-generator repository cloned as a sibling:
 
 ```bash
 # In .envrc.config
-MARS_CONFIG_PATH="${PWD}/../terrain-intelligence-generator/docker/mars_calibration_m20"
+MARS_CONFIG_PATH="${PWD}/../terrain-intelligence-generator/docker/mars_calibration"
 ```
 
 ### Example 2: User Home Directory
@@ -203,7 +203,7 @@ For shared systems with calibration in `/opt`:
 
 ```bash
 # In .envrc.config
-MARS_CONFIG_PATH="/opt/mars_calibration_m20"
+MARS_CONFIG_PATH="/opt/mars_calibration"
 ```
 
 ### Example 4: Per-Mission Calibration
@@ -211,11 +211,11 @@ MARS_CONFIG_PATH="/opt/mars_calibration_m20"
 Switch between missions using different paths:
 
 ```bash
-# M2020
-export MARS_CONFIG_PATH="/data/mars/m2020/calibration"
+# Mission A
+export MARS_CONFIG_PATH="/data/mars/mission-a/calibration"
 
-# MSL
-export MARS_CONFIG_PATH="/data/mars/msl/calibration"
+# Mission B
+export MARS_CONFIG_PATH="/data/mars/mission-b/calibration"
 ```
 
 ## Verification
