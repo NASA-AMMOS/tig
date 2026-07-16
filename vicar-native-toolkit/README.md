@@ -161,6 +161,7 @@ toolkit-shell     # Open interactive shell in container
 toolkit-status    # Show container status and wrapper count
 toolkit-stop      # Stop and remove container
 toolkit-restart   # Restart container (useful after config changes)
+toolkit-update    # Pull the latest CONTAINER_IMAGE and recreate the container
 toolkit-verify-calib  # Verify MARS calibration mounting (if configured)
 ```
 
