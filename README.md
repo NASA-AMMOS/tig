@@ -1,19 +1,35 @@
 # Terrain Intelligence Generator (TIG)
 
-Open source stereo terrain reconstruction pipeline using NASA's VICAR image processing system.
+Open source VICAR image processing environment for planetary science and stereo terrain reconstruction.
 
 ## Overview
 
-TIG provides a Docker-based execution environment for generating 3D terrain meshes from stereo camera images. Built on VICAR (Video Image Communication and Retrieval), NASA JPL's image processing system used across planetary missions. The vicar-native-toolkit provides a helper/wrapper script to interact with the TIG container.
+TIG provides a containerized VICAR execution environment with ~550 image processing commands spanning enhancement, filtering, geometric transformation, format conversion, and multi-mission calibration. Built on VICAR (Video Image Communication and Retrieval), NASA JPL's general-purpose image processing system used across planetary missions since the 1960s. While TIG's flagship capability is stereo terrain reconstruction, it provides comprehensive image processing tools for planetary science workflows. The vicar-native-toolkit provides native-like CLI access to all VICAR commands.
 
 ## Features
 
+### Terrain Reconstruction (Flagship Capability)
 - **Stereo Correlation**: Generate disparity maps from stereo image pairs (marscorr, marscor3)
 - **3D Point Clouds**: Convert disparity to XYZ coordinates (marsxyz)
 - **Mesh Generation**: Create textured 3D surface meshes in OBJ / OpenInventor formats (marsmesh)
-- **Image Conversion**: Convert VICAR images to PNG / JPEG / TIFF (vicario)
-- **VISOR Calibration**: Integrates with VISOR (VICAR Institutional Stereo Observation Repository) containing M20 and many other open source mission calibrations
-- **Open Source**: Community-accessible VICAR-based terrain processing
+- **Terrain Analysis**: Orthoprojection, mosaicking, localization (marsmap, marsmos, marsautoloco)
+
+### Image Processing (~550 Commands)
+- **Enhancement**: Contrast stretching, filtering, dynamic range adjustment (stretch, filter)
+- **Geometric Operations**: Transformations, rotation, resizing, registration (geom, rotate, size)
+- **Format Conversion**: VICAR to/from PNG, JPEG, TIFF (vicario)
+- **Analysis**: Histograms, statistics, pixel inspection (hist, list, label)
+- **Mathematical Operations**: Image arithmetic, band math (f2)
+
+### Multi-Mission Support
+- **VISOR Integration**: 1,461 calibration files for M20, MSL, MER, Phoenix missions
+- **Camera Models**: CAHVORE format support with automatic calibration lookup
+- **Sample Data**: 249 sample files including stereo pairs and pre-computed XYZ
+
+### Development Tools
+- **Native Toolkit**: ~550 command wrappers for native-like CLI usage
+- **Fast Execution**: Long-running container with minimal latency (~50-100ms)
+- **Cross-Platform**: Linux, macOS (including Apple Silicon via emulation)
 
 ## Quick Start
 
@@ -68,20 +84,26 @@ meshlab workspace/terrain.obj
 
 ### VICAR Native Toolkit
 
-A helper/wrapper script that provides native-like CLI usage for VICAR commands inside the TIG Docker execution environment. Features:
+A wrapper system that provides native-like CLI usage for all ~550 VICAR commands inside the TIG Docker execution environment. Features:
 - ✨ **One-command setup** via `make bootstrap`
 - 🚀 **Fast activation** (~1 second, symlink-based wrappers)
-- 🔧 **Auto-discovers** ~550 VICAR commands
+- 🔧 **Auto-discovers** all ~550 VICAR commands
 - 🐳 **Custom image support** via `IMAGE=` variable
 - 📊 **VISOR calibration mounting** for terrain processing
+- 🌐 **Full VICAR access** - not just terrain tools, but all image processing commands
 
 📁 `vicar-native-toolkit/`  
 📖 [Toolkit README](vicar-native-toolkit/README.md) | [Quick Reference](vicar-native-toolkit/docs/QUICKREF.md)
 
 ### Terrain Intelligence Generator
-An optimized VICAR execution environment, packaged as a Docker image with the VICAR toolset and VISOR calibration integration for stereo processing and mesh generation.
+A containerized VICAR execution environment, packaged as a Docker image with the complete VICAR toolset (~550 commands), VISOR calibration integration, and optimized runtime for both interactive and batch processing workflows.
 - 📁 `terrain-intelligence-generator/docker/`
 - 📖 [Getting Started](docs/getting-started.md)
+
+**Image Variants:**
+- **`tig:opensource`** (~2GB) - Complete VICAR system with 976 commands
+- **`tig:geocal`** (~3-4GB) - VICAR + GeoCal geometric calibration & bundle adjustment
+- 📖 [GeoCal Integration Guide](docs/geocal-integration.md)
 
 ### VISOR (VICAR Institutional Stereo Observation Repository)
 Open source repository containing camera calibration files for multiple missions including M20 (Mars 2020), MER, MSL, and others. TIG integrates with VISOR for accurate stereo processing.
@@ -101,13 +123,29 @@ Example workflows for stereo mesh generation.
 
 ## Key Tools
 
+### Terrain Reconstruction Pipeline
 | Tool | Purpose | Input | Output |
 |------|---------|-------|--------|
 | `marscorr` | Initial stereo correlation | Stereo pair | Disparity map |
 | `marscor3` | Disparity refinement | Disparity + images | Refined disparity |
 | `marsxyz` | 3D point generation | Disparity + images | XYZ point cloud |
 | `marsmesh` | Surface triangulation | XYZ + texture | 3D mesh (OBJ) |
-| `vicario` | Format conversion | VICAR image | PNG/JPEG/TIFF |
+| `marsmap` | Orthoprojection | Images + geometry | Map-projected images |
+
+### Image Processing Commands (~550 Available)
+| Tool | Purpose | Category |
+|------|---------|----------|
+| `vicario` | VICAR ↔ PNG/JPEG/TIFF | Format conversion |
+| `gen` | Generate test images | Development |
+| `stretch` | Contrast adjustment | Enhancement |
+| `filter` | Spatial filtering | Enhancement |
+| `geom` | Geometric transformation | Geometric |
+| `hist` | Histogram analysis | Analysis |
+| `label` | VICAR metadata viewer | Metadata |
+| `list` | Pixel value display | Analysis |
+| `f2` | Image arithmetic | Mathematical |
+
+*TIG provides ~550 total VICAR commands. Above shows representative examples.*
 
 ## Requirements
 
@@ -136,10 +174,10 @@ tig/
 ## Contributing
 
 Contributions welcome! This project uses:
-- **VICAR**: JPL's MIPL image processing system
+- **VICAR**: JPL's MIPL general-purpose image processing system (~550 commands)
 - **Docker**: Containerized VICAR execution environment
 - **VISOR**: Open source calibration repository for multiple missions
-- **Open Source**: Community-driven terrain processing tools
+- **Open Source**: Community-driven planetary image processing and terrain reconstruction tools
 
 ## License
 
@@ -147,7 +185,7 @@ Apache License 2.0 (see LICENSE file)
 
 ## About VICAR
 
-VICAR (Video Image Communication and Retrieval) is a general-purpose image processing system developed by NASA JPL's Multimission Image Processing Laboratory (MIPL). Used for processing images from Mars rovers, lunar missions, and deep space probes since the 1960s.
+VICAR (Video Image Communication and Retrieval) is a general-purpose image processing system developed by NASA JPL's Multimission Image Processing Laboratory (MIPL). Used for processing images from Mars rovers, lunar missions, and deep space probes since the 1960s. VICAR provides comprehensive image processing capabilities including enhancement, filtering, geometric transformation, radiometric calibration, stereo reconstruction, and format conversion. TIG makes this powerful system accessible through modern containerization.
 
 ## Acknowledgments
 
