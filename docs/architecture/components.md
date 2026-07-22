@@ -1,6 +1,6 @@
 # TIG Architecture
 
-Overview of the Terrain Intelligence Generator system components.
+Overview of the Terrain Intelligence Generator system components and VICAR image processing environment.
 
 ## System Components
 
@@ -10,30 +10,37 @@ Overview of the Terrain Intelligence Generator system components.
 ├─────────────────────────────────────────────────────────┤
 │  ┌─────────────┐  ┌──────────────┐  ┌──────────────┐  │
 │  │   VICAR     │  │  MARS Tools  │  │   Vicario    │  │
-│  │  Programs   │  │              │  │  (Java JAR)  │  │
-│  │  (~540)     │  │  marscorr    │  │              │  │
-│  │             │  │  marscor3    │  │  Image       │  │
-│  │  gen        │  │  marsxyz     │  │  Converter   │  │
-│  │  label      │  │  marsmesh    │  │              │  │
-│  │  list       │  │  marsmap     │  │  VICAR→PNG   │  │
+│  │  Commands   │  │   (~74)      │  │  (Java JAR)  │  │
+│  │  (~550)     │  │              │  │              │  │
+│  │             │  │  marscorr    │  │  Image       │  │
+│  │  gen        │  │  marscor3    │  │  Converter   │  │
+│  │  label      │  │  marsxyz     │  │              │  │
+│  │  stretch    │  │  marsmesh    │  │  VICAR→PNG   │  │
+│  │  filter     │  │  marsmap     │  │  PNG→VICAR   │  │
+│  │  geom       │  │  marsmos     │  │              │  │
+│  │  hist       │  │  + 68 more   │  │              │  │
+│  │  + ~540     │  │              │  │              │  │
 │  └─────────────┘  └──────────────┘  └──────────────┘  │
 │                                                         │
 │  ┌─────────────────────────────────────────────────┐  │
-│  │           M2020 Calibration Data                │  │
-│  │  - Camera models (NavCam, Mastcam-Z)           │  │
+│  │      Multi-Mission Calibration Data (VISOR)     │  │
+│  │  - M20, MSL, MER, Phoenix camera models         │  │
 │  │  - Flat field corrections                       │  │
 │  │  - Geometric distortion models                  │  │
+│  │  - 1,461 calibration files                      │  │
+│  │  - 249 sample data files                        │  │
 │  └─────────────────────────────────────────────────┘  │
 └─────────────────────────────────────────────────────────┘
          │                    │                    │
          ▼                    ▼                    ▼
-    Input Images         Processing            Output Meshes
-    (VICAR .VIC)       (Workspace)          (OBJ, PNG, XYZ)
+    Input Images         Processing            Output Files
+    (VICAR .VIC)       (Workspace)       (OBJ, PNG, VICAR, etc.)
+```
 ```
 
 ## Processing Pipeline
 
-### Full Correlation Pipeline
+### Full Stereo Terrain Reconstruction Pipeline (Flagship Capability)
 
 ```
 Stereo Pair (L/R .VIC)
@@ -68,13 +75,20 @@ XYZ Point Cloud (.IMG)
 
 ## Core Tools
 
-### VICAR Programs
-- **Base**: Full VICAR image processing suite (~540 CLI wrappers on `PATH`)
+### VICAR Commands (~550 Available)
+- **Base**: Full VICAR image processing suite for planetary science
+- **Categories**:
+  - **Image Generation**: gen, copy
+  - **Enhancement**: stretch, filter, histogram equalization
+  - **Geometric**: geom, rotate, size, registration
+  - **Analysis**: hist, list, label, statistics
+  - **Mathematical**: f2 (image arithmetic), band operations
+  - **Multispectral**: band manipulation, transformations
 - **Location**: `/usr/local/bin/` (wrappers) → `/usr/local/vicar/dev/`
 - **Runtime**: TAE (Terminal Application Executive)
 
-### MARS Tools
-Specialized Mars terrain processing:
+### MARS Terrain Tools (~74 Commands)
+Specialized Mars terrain processing suite:
 
 | Tool | Function | Input | Output |
 |------|----------|-------|--------|
@@ -83,14 +97,18 @@ Specialized Mars terrain processing:
 | marsxyz | 3D triangulation | Disparity + images | XYZ point cloud |
 | marsmesh | Surface meshing | XYZ + texture | OBJ mesh |
 | marsmap | Orthoprojection | XYZ | Map projection |
+| marsmos | Mosaicking | Multiple images | Panorama |
+| marsautotie | Tie point detection | Image pair | Tie points |
+| marsrfilt | Rover filtering | XYZ | Filtered XYZ |
 
 ### Vicario (Java)
-- **Purpose**: VICAR format conversion
+- **Purpose**: VICAR format conversion (VICAR ↔ standard formats)
 - **Technology**: Java 11 + Java Advanced Imaging
 - **Features**: 
   - Dynamic range rescaling (16-bit → 8-bit)
-  - Format support: PNG, JPEG, TIFF
+  - Format support: PNG, JPEG, TIFF (read and write)
   - Proper VICAR label parsing
+  - Bidirectional conversion
 
 ## Data Flow
 
@@ -127,7 +145,7 @@ Specialized Mars terrain processing:
 
 ## Calibration Data
 
-### M2020 Calibration Structure
+### Multi-Mission Calibration Structure (VISOR Integration)
 
 ```
 mars_calibration_m20/
@@ -136,11 +154,20 @@ mars_calibration_m20/
 │   ├── M20_SN_0102.cahvore  # NavCam Right
 │   ├── ZL*.cahvore          # Mastcam-Z Left
 │   └── ZR*.cahvore          # Mastcam-Z Right
+
+mars_calibration_msl/
+mars_calibration_mer/
+mars_calibration_phoenix/
+├── camera_models/
 ├── flat_fields/
 │   └── *.parms              # Flat field corrections
 └── param_files/
     ├── M20_camera_mapping.xml
-    └── MSL_camera_mapping.xml
+    ├── MSL_camera_mapping.xml
+    └── MER_camera_mapping.xml
+
+Total: 1,461 calibration files across all missions
+       249 sample data files
 ```
 
 ### Camera Models
@@ -157,18 +184,18 @@ Base Layer: Oracle Linux 8
     ↓
 Builder Stage: downloads pre-built VICAR + external library releases
     ↓
-Runtime Layer: VICAR binaries + MARS tools + Java + vicario.jar + calibration
+Runtime Layer: VICAR binaries (~550 commands) + MARS tools (~74) + Java + vicario.jar + multi-mission calibration
     ↓
-Command Wrappers: ~540 CLI wrappers generated under /usr/local/bin
+Command Wrappers: ~550 CLI wrappers generated under /usr/local/bin
     ↓
 Entry Point: Shell with VICAR environment
 ```
 
 ### Volume Mounts
 
-- `/workspace` - Input/output files
-- `/usr/local/vicar/mars_calib` - M2020 calibration (read-only)
-- `/usr/local/vicar/visor_data` - Sample data (optional)
+- `/workspace` - Input/output files (VICAR images, meshes, point clouds, processed data)
+- `/usr/local/vicar/mars_calib` - Multi-mission calibration data (M20, MSL, MER, Phoenix) (read-only)
+- `/usr/local/vicar/visor_data` - Sample data files (optional)
 
 ### Environment Variables
 

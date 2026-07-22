@@ -1,6 +1,6 @@
 # Getting Started with TIG
 
-Quick setup guide for running Mars 2020 stereo mesh generation.
+Quick setup guide for TIG - a VICAR image processing environment with ~550 commands. This guide demonstrates the flagship stereo terrain reconstruction workflow.
 
 ## Prerequisites
 
@@ -115,9 +115,13 @@ ERROR: MARS calibration not found
 
 ## Next Steps
 
+### Terrain Reconstruction
 - **[Mesh Generation Demo](demos/mesh-generation.md)** - Detailed walkthrough
 - **[Command Reference](demos/commands.md)** - Available VICAR tools
+
+### General Image Processing
 - **[Vicario Reference](reference/vicario.md)** - Image format conversion
+- **VICAR Commands** - Access ~550 commands for enhancement, filtering, geometric operations via vicar-native-toolkit
 
 ## Configuration
 

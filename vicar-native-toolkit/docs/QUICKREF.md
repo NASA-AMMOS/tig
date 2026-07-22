@@ -50,6 +50,7 @@ toolkit-status         # Show container status
 toolkit-shell          # Interactive shell in container
 toolkit-stop           # Stop and remove container
 toolkit-restart        # Restart container
+toolkit-update         # Pull latest image and recreate container
 toolkit-verify-calib   # Verify MARS calibration (if configured)
 
 # VICAR commands work natively
@@ -170,7 +171,7 @@ readlink .direnv/wrappers/gen  # Should point to ../vicar-exec
 
 # Image issues
 docker images | grep terrain-intelligence-generator
-docker pull ghcr.io/nasa-ammos/tig/terrain-intelligence-generator:opensource
+toolkit-update   # pull latest CONTAINER_IMAGE and recreate container
 
 # Container logs
 docker logs vicar-sidecar

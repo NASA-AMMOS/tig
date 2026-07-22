@@ -1,6 +1,8 @@
 # VICAR Native Toolkit
 
-Make 540+ VICAR CLI programs living inside a Docker container feel like native commands on your host machine. When you activate the environment, the container starts, directories mount, X11 routing is established, and every command "just works" as if installed locally.
+Make ~550 VICAR image processing commands living inside a Docker container feel like native commands on your host machine. When you activate the environment, the container starts, directories mount, X11 routing is established, and every command "just works" as if installed locally.
+
+This provides full access to VICAR's comprehensive image processing capabilities (~550 commands) including enhancement, filtering, geometric transformation, analysis, terrain reconstruction, and format conversion.
 
 **Works on both Linux (bash) and macOS (zsh), including Apple Silicon (M1/M2).**
 
@@ -25,10 +27,10 @@ This project implements the docker-native-wrapper pattern using:
 
 ### Wrapper Architecture
 
-Instead of generating 540+ individual wrapper scripts, the toolkit uses a symlink-based approach:
+Instead of generating ~550 individual wrapper scripts, the toolkit uses a symlink-based approach:
 
 1. **Single wrapper script** (`vicar-exec`) - Handles all VICAR commands
-2. **Command detection** - Auto-discovers available commands from container
+2. **Command detection** - Auto-discovers available commands from container (~550 total)
 3. **Symlink generation** - Creates symlinks pointing to `vicar-exec` for each command
 4. **Dynamic routing** - `vicar-exec` determines which command to run based on symlink name
 
@@ -37,6 +39,7 @@ Instead of generating 540+ individual wrapper scripts, the toolkit uses a symlin
 - Reduced disk usage (~2MB vs 3.5MB)
 - Single point of maintenance
 - Identical functionality
+- Access to all ~550 VICAR commands plus ~74 MARS terrain tools
 
 ### Performance
 
@@ -161,6 +164,7 @@ toolkit-shell     # Open interactive shell in container
 toolkit-status    # Show container status and wrapper count
 toolkit-stop      # Stop and remove container
 toolkit-restart   # Restart container (useful after config changes)
+toolkit-update    # Pull the latest CONTAINER_IMAGE and recreate the container
 toolkit-verify-calib  # Verify MARS calibration mounting (if configured)
 ```
 
@@ -206,10 +210,10 @@ vicar-native-toolkit/
    - Starts the container (or uses existing one)
    - Configures X11 forwarding for your platform
    - Generates `vicar-exec` and `toolkit-utils` scripts
-   - Auto-discovers available VICAR commands
+   - Auto-discovers available VICAR commands (~550 total)
    - Creates symlinks for each command in `.direnv/wrappers/`
    - Adds `.direnv/wrappers/` to your PATH
-4. All VICAR commands are now available
+4. All VICAR commands are now available (~550 image processing commands)
 
 ### Command Execution Flow
 
@@ -447,3 +451,16 @@ For issues:
 ---
 
 **Happy VICAR processing!**
+
+## Summary
+
+The VICAR Native Toolkit provides seamless access to ~550 VICAR image processing commands through Docker containerization. Use it for:
+
+- **Image Enhancement**: stretch, filter, histogram operations
+- **Geometric Operations**: rotate, resize, registration, transformation  
+- **Terrain Reconstruction**: Full stereo-to-mesh pipeline (marscorr, marsxyz, marsmesh)
+- **Format Conversion**: VICAR ↔ PNG/JPEG/TIFF (vicario)
+- **Analysis**: Histograms, statistics, pixel inspection
+- **Multi-Mission Support**: M20, MSL, MER, Phoenix calibrations
+
+All commands available as native-like CLI tools with minimal latency (~50-100ms).

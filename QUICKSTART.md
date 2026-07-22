@@ -1,4 +1,6 @@
-# Quick Start - Running Demos with Your Data
+# Quick Start - TIG Image Processing & Terrain Reconstruction
+
+TIG provides ~550 VICAR image processing commands. This guide focuses on the flagship terrain reconstruction workflow, but you can use TIG for general image processing, format conversion, enhancement, and analysis.
 
 ## Option 1: Original Demo (Temporary Container)
 
@@ -40,7 +42,7 @@ docker stop tig-mesh-demo && docker rm tig-mesh-demo
 
 ## Option 2: Native Toolkit Demo (Persistent Container)
 
-Native-looking commands for interactive development. Container stays running.
+Native-looking commands for interactive development and full VICAR access. Container stays running, providing access to all ~550 VICAR commands beyond just mesh generation.
 
 ### One-time Setup
 
@@ -229,13 +231,28 @@ cd /path/to/tig
 cd vicar-native-toolkit
 direnv allow
 
-# 2. Work interactively
+# 2. Work interactively with VICAR commands
 cd workspace
+
+# Generate test images
 gen out=test.img nl=100 ns=100
+
+# View image metadata
 label test.img
+
+# Image processing examples
+stretch inp=test.img out=stretched.img
+filter inp=test.img out=filtered.img
+geom inp=test.img out=rotated.img rotate=45
+
+# Terrain processing
 marsmesh inp=pointcloud.xyz out=custom.obj
 
+# Convert VICAR to standard formats
+vicario inp=test.img out=test.png
+
 # 3. Container stays running for next session
+# Access all ~550 VICAR commands the same way
 ```
 
 ---
@@ -266,7 +283,14 @@ ls -lh terrain.obj
 
 ## Next Steps
 
+### Terrain Reconstruction
 - Read full documentation: `docs/demos/mesh-generation.md`
-- Explore VICAR commands: `toolkit-shell` then `ls /usr/local/bin`
 - Customize processing: Edit marsmesh/marsxyz parameters in demo scripts
 - Integrate into pipelines: Use as reference for your own scripts
+
+### General Image Processing
+- Explore VICAR commands: `toolkit-shell` then `ls /usr/local/bin` (see ~550 commands)
+- Image enhancement: Try `stretch`, `filter`, `hist` commands
+- Format conversion: Use `vicario` for VICAR ↔ PNG/JPEG/TIFF
+- Geometric operations: Experiment with `geom`, `rotate`, `size`
+- Learn VICAR: See vicar-native-toolkit documentation for command usage

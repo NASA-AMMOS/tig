@@ -118,6 +118,28 @@ make bootstrap MARS_CALIB=/path/to/mars_calibration
 toolkit-verify-calib
 ```
 
+### SELinux (Linux)
+
+On Linux hosts with SELinux in **Enforcing** mode, the container (`container_t`)
+is denied access to the host X11 socket (`/tmp/.X11-unix`), so GUI tools such as
+`xvd` fail with a misleading `Can't open display`. The toolkit handles this
+automatically:
+
+```bash
+# Auto-enabled on SELinux-Enforcing hosts when left unset.
+# Adds "--security-opt label=disable" at container creation.
+DISABLE_SELINUX_LABEL=true
+```
+
+- **Unset (default):** auto-enabled only when `getenforce` reports `Enforcing`.
+- **`DISABLE_SELINUX_LABEL=true`:** always disable labeling.
+- **`DISABLE_SELINUX_LABEL=false`:** never disable it (the toolkit logs a hint
+  if it detects Enforcing mode and GUI tools may fail).
+
+Changing this only affects a newly created container. After changing it, run
+`toolkit-update` (or `toolkit-restart` then re-enter the directory) to recreate
+the container with the new setting.
+
 ### Command Auto-Discovery
 
 By default, commands are auto-discovered from the container:

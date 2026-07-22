@@ -140,6 +140,7 @@ Available commands:
   toolkit-shell     - Open interactive shell in container
   toolkit-stop      - Stop and remove container
   toolkit-restart   - Restart container with new configuration
+  toolkit-update    - Pull latest image and recreate container
 
 VICAR tools: 543 commands available
 Working directory: <current-path>/vicar-native-toolkit/workspace

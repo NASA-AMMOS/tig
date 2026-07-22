@@ -294,6 +294,9 @@ RUN ARCH_DIR="x86-64-linx" && \
                     echo "export VICSYS=DEVELOPMENT" >> /usr/local/bin/$cmdname; \
                     echo "export LD_LIBRARY_PATH=$VICAR_LIB_PATH:\$LD_LIBRARY_PATH" >> /usr/local/bin/$cmdname; \
                     echo "export PATH=${V2TOP}/gui/lib/$ARCH_DIR:${V2TOP}/mars/lib/$ARCH_DIR:${V2TOP}/p2/lib/$ARCH_DIR:\$PATH" >> /usr/local/bin/$cmdname; \
+                    echo "# X11 app-defaults (.xres) so Motif widget labels resolve instead of showing placeholder resource names" >> /usr/local/bin/$cmdname; \
+                    echo "export XFILESEARCHPATH=\"${V2TOP}/gui/lib/$ARCH_DIR/%N%S.xres:${V2TOP}/p2/lib/$ARCH_DIR/%N%S.xres:${V2TOP}/mars/lib/$ARCH_DIR/%N%S.xres:/usr/lib/X11/%L/%T/%N%C%S:/usr/lib/X11/%l/%T/%N%C%S:/usr/lib/X11/%T/%N%C%S:/usr/lib/X11/%L/%T/%N%S:/usr/lib/X11/%l/%T/%N%S:/usr/lib/X11/%T/%N%S\${XFILESEARCHPATH:+:\$XFILESEARCHPATH}\"" >> /usr/local/bin/$cmdname; \
+                    echo "export XBMLANGPATH=\"%D:${V2TOP}/p2/lib/$ARCH_DIR/%B\"" >> /usr/local/bin/$cmdname; \
                     echo "$cmd \"\$@\"" >> /usr/local/bin/$cmdname; \
                     echo "exit_code=\$?" >> /usr/local/bin/$cmdname; \
                     echo "# VICAR commands often return non-zero on success, treat 0-2 as success" >> /usr/local/bin/$cmdname; \
@@ -319,6 +322,9 @@ RUN ARCH_DIR="x86-64-linx" && \
     echo "export VICSYS=DEVELOPMENT" >> /etc/profile.d/vicar.sh && \
     echo "export LD_LIBRARY_PATH=$VICAR_LIB_PATH:\$LD_LIBRARY_PATH" >> /etc/profile.d/vicar.sh && \
     echo "export PATH=${V2TOP}/tae53/bin:${V2TOP}/bin:\$PATH" >> /etc/profile.d/vicar.sh && \
+    echo "# X11 app-defaults (.xres) so Motif GUI (xvd) widget labels resolve instead of showing placeholder resource names" >> /etc/profile.d/vicar.sh && \
+    echo "export XFILESEARCHPATH=\"${V2TOP}/gui/lib/$ARCH_DIR/%N%S.xres:${V2TOP}/p2/lib/$ARCH_DIR/%N%S.xres:${V2TOP}/mars/lib/$ARCH_DIR/%N%S.xres:/usr/lib/X11/%L/%T/%N%C%S:/usr/lib/X11/%l/%T/%N%C%S:/usr/lib/X11/%T/%N%C%S:/usr/lib/X11/%L/%T/%N%S:/usr/lib/X11/%l/%T/%N%S:/usr/lib/X11/%T/%N%S\${XFILESEARCHPATH:+:\$XFILESEARCHPATH}\"" >> /etc/profile.d/vicar.sh && \
+    echo "export XBMLANGPATH=\"%D:${V2TOP}/p2/lib/$ARCH_DIR/%B\"" >> /etc/profile.d/vicar.sh && \
     chmod +x /etc/profile.d/vicar.sh
 
 # Verify VICAR installation
