@@ -108,6 +108,7 @@ it, never a silent skip. Runtime is ~7 minutes, ~6 of them the full-frame
 | `mesh` | `demo-mesh-generation-with-xyz.sh --xyz` | vertex and face counts, every coordinate finite and within 1e6 m |
 | `surface-characteristics` | `demo-surface-characteristics.sh` | products share the XYZ grid, slope in degrees, roughness a small height that actually varies (a raster of the 0.1 m "could not compute" fill fails), both normals fields written |
 | `co-registration` | `demo-co-registration.sh` plus a difference raster | tiepoints kept, mean pixel error improved and under tolerance, non-zero difference raster |
+| `change-monitoring` | `demo-change-monitoring.sh` on two frames of the sweep | the demo completes its own statistics-box and normalisation guards, difference raster not uniform |
 
 Bounds are floors and ranges taken from an observed run and commented with the
 value seen, not golden images: VICAR residuals do not reproduce bit for bit
@@ -116,8 +117,6 @@ between runs, so an exact-match comparison would be flaky.
 Not demonstrated by the suite, and reported as UNVERIFIED in its report rather
 than omitted:
 
-- **change-monitoring** — needs `demo-change-monitoring.sh`; the stage runs
-  automatically once that demo is in the tree.
 - **the demos' built-in stereo path** — `demo-mesh-generation-with-xyz.sh
   --stereo-left/--stereo-right` relies on `marscorr`'s default seed, which
   reports "No valid seed points found" on these Navcam frames. The suite seeds

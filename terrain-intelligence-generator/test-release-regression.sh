@@ -21,9 +21,10 @@
 #   mesh                    demo-mesh-generation-with-xyz.sh --xyz
 #   surface-characteristics demo-surface-characteristics.sh
 #   co-registration         demo-co-registration.sh + residual difference raster
+#   change-monitoring       demo-change-monitoring.sh on two frames of one sweep,
+#                           windowed to their overlap; see CHANGE_BOUNDS below
 #
 # Not covered, and reported as UNVERIFIED rather than skipped:
-#   change-monitoring       needs demo-change-monitoring.sh (PR #29, not merged)
 #   demo stereo path        demo-mesh-generation-with-xyz.sh --stereo-left/right
 #                           uses marscorr's default seed, which does not
 #                           correlate these frames; see STEREO_SEED below
@@ -132,6 +133,10 @@ MAX_ROUGHNESS_M=1.0         # max 0.100, mean 0.055
 MIN_ROUGH_STD=0.005
 MIN_TIEPOINTS=10            # 25
 MAX_COREG_RESIDUAL_PX=5.0   # 5.96 commanded -> 2.66 solved
+# The two change epochs are single frames 29.7 deg apart in azimuth, so their
+# joint projection is mostly unpainted: pin the window to their common ground.
+CHANGE_OVERLAP=30           # marschkovl measures 31.0% for this pair
+CHANGE_BOUNDS="75 95 5 -30" # inside both footprints (joint 42.6..130.0 az, 15.0..-40.1 el)
 MAX_COREG_DIFF_MEAN=5.0     # 0.00005 DN, std 0.138
 
 STAGES_PASSED=0
@@ -560,7 +565,7 @@ CHANGE_IFACE=0
 [ -x "${CHANGE_DEMO}" ] && "${CHANGE_DEMO}" --help 2>&1 | grep -q -- '--epoch1' && CHANGE_IFACE=1
 if [ ! -x "${CHANGE_DEMO}" ]; then
     record UNVERIFIED "change-monitoring" \
-        "demo-change-monitoring.sh is not in this tree (PR #29 not merged); the stage runs automatically once it is"
+        "demo-change-monitoring.sh is not in this tree; the stage runs automatically once it is"
 elif [ ${CHANGE_IFACE} -eq 0 ]; then
     record UNVERIFIED "change-monitoring" \
         "demo-change-monitoring.sh does not advertise --epoch1/--epoch2; update this stage to its current interface"
@@ -568,7 +573,8 @@ else
     CHANGE_WS="${SCRATCH}/change/workspace-change"
     mkdir -p "${SCRATCH}/change"
     ( cd "${SCRATCH}/change" && "${REPO_ROOT}/demo-change-monitoring.sh" \
-        --epoch1 "${PANO_FRAMES[0]}" --epoch2 "${PANO_FRAMES[1]}" ) \
+        --epoch1 "${PANO_FRAMES[0]}" --epoch2 "${PANO_FRAMES[1]}" \
+        --overlap "${CHANGE_OVERLAP}" --bounds "${CHANGE_BOUNDS}" ) \
         > "${SCRATCH}/change/demo.log" 2>&1
     CHANGE_RC=$?
     # diff_lin.img is the mean/stdev-matched difference raster the demo reports on.
