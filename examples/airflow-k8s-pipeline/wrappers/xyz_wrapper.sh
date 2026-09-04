@@ -17,8 +17,8 @@ XYM_OUTPUT_KEY="$6"
 RUN_ID="$7"
 EYE="$8"  # "left" or "right"
 
-export AWS_ACCESS_KEY_ID=test
-export AWS_SECRET_ACCESS_KEY=test
+export AWS_ACCESS_KEY_ID=minioadmin
+export AWS_SECRET_ACCESS_KEY=minioadmin
 export AWS_DEFAULT_REGION=us-west-2
 export AWS_REQUEST_CHECKSUM_CALCULATION=when_required
 export MARS_CONFIG_PATH=/usr/local/vicar/mars_calib

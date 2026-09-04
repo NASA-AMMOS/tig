@@ -3,7 +3,7 @@ FROM python:3.11-slim
 WORKDIR /app
 
 # Install dependencies
-RUN pip install --no-cache-dir boto3 requests
+RUN pip install --no-cache-dir pika requests
 
 # Copy listener script
 COPY listener.py /app/

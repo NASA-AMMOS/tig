@@ -1,6 +1,6 @@
 # VICAR worker image for Airflow KubernetesPodOperator tasks.
 # Base: Open source TIG VICAR execution environment (Oracle Linux 8, x86_64).
-# Adds AWS CLI v2 so wrapper scripts can download/upload from LocalStack S3.
+# Adds AWS CLI v2 so wrapper scripts can download/upload from MinIO (S3 API).
 FROM ghcr.io/nasa-ammos/tig/terrain-intelligence-generator:opensource
 
 USER root

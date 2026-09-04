@@ -18,17 +18,19 @@ spec:
         image: ids-listener:latest
         imagePullPolicy: IfNotPresent
         env:
-        - name: LOCALSTACK_ENDPOINT
-          value: "http://localstack.tig-airflow.svc.cluster.local:4566"
-        - name: SQS_QUEUE_URL
-          value: "http://localstack.tig-airflow.svc.cluster.local:4566/000000000000/ids-fdr-queue"
+        - name: AMQP_URL
+          value: "amqp://guest:guest@rabbitmq.tig-airflow.svc.cluster.local:5672/%2F"
+        - name: AMQP_EXCHANGE
+          value: "ids-events"
+        - name: AMQP_QUEUE
+          value: "ids-fdr-queue"
         - name: AIRFLOW_API_URL
           value: "http://airflow-webserver.tig-airflow.svc.cluster.local:8080/api/v1"
         - name: AIRFLOW_USERNAME
           value: "admin"
         - name: AIRFLOW_PASSWORD
           value: "admin"
-        - name: POLL_INTERVAL
+        - name: RECONNECT_DELAY
           value: "5"
         - name: STEREO_PAIR_TIMEOUT
           value: "300"

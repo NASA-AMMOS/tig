@@ -245,6 +245,7 @@ programs run with nothing downloaded and nothing mounted. Opt-in via
 - **[Architecture](docs/architecture/components.md)** - How the pieces fit together
 - **[Airflow + Kubernetes Pipeline](examples/airflow-k8s-pipeline/README.md)** - Event-driven terrain mesh generation example
 - **[MMGIS Integration](examples/mmgis-integration/README.md)** - Getting a TIG mosaic and mesh onto a map in NASA-AMMOS MMGIS
+- **[Agent Skills](.agents/skills/)** - `tig-setup` plus one `tig-generate-*` skill per demo product, `tig-export-to-mmgis`, and `tig-demo-testing` for verifying the demos
 
 ## Key Tools
 

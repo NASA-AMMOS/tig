@@ -1,0 +1,81 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: minio
+  namespace: tig-airflow
+spec:
+  type: ClusterIP
+  ports:
+    - name: s3
+      port: 9000
+      targetPort: 9000
+    - name: console
+      port: 9001
+      targetPort: 9001
+  selector:
+    app: minio
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: minio
+  namespace: tig-airflow
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: minio
+  template:
+    metadata:
+      labels:
+        app: minio
+    spec:
+      # MinIO validates the AMQP target at startup, so wait for the broker.
+      initContainers:
+      - name: wait-for-rabbitmq
+        image: busybox:1.36
+        command: ["sh", "-c", "until nc -z rabbitmq.tig-airflow.svc.cluster.local 5672; do sleep 2; done"]
+      containers:
+      - name: minio
+        image: minio/minio:RELEASE.2024-12-18T13-15-44Z
+        args: ["server", "/data", "--console-address", ":9001"]
+        ports:
+        - containerPort: 9000
+        - containerPort: 9001
+        env:
+        - name: MINIO_ROOT_USER
+          value: "minioadmin"
+        - name: MINIO_ROOT_PASSWORD
+          value: "minioadmin"
+        # Bucket notification target "RABBITMQ" -> arn:minio:sqs::RABBITMQ:amqp
+        - name: MINIO_NOTIFY_AMQP_ENABLE_RABBITMQ
+          value: "on"
+        - name: MINIO_NOTIFY_AMQP_URL_RABBITMQ
+          value: "amqp://guest:guest@rabbitmq.tig-airflow.svc.cluster.local:5672"
+        - name: MINIO_NOTIFY_AMQP_EXCHANGE_RABBITMQ
+          value: "ids-events"
+        - name: MINIO_NOTIFY_AMQP_EXCHANGE_TYPE_RABBITMQ
+          value: "fanout"
+        - name: MINIO_NOTIFY_AMQP_DURABLE_RABBITMQ
+          value: "on"
+        - name: MINIO_NOTIFY_AMQP_DELIVERY_MODE_RABBITMQ
+          value: "2"
+        readinessProbe:
+          httpGet:
+            path: /minio/health/ready
+            port: 9000
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        volumeMounts:
+        - name: data
+          mountPath: /data
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+      volumes:
+      - name: data
+        emptyDir: {}

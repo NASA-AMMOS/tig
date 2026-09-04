@@ -10,15 +10,15 @@ spec:
       restartPolicy: OnFailure
       containers:
       - name: seed
-        image: amazon/aws-cli:2.13.0
-        command: ["/bin/bash", "/scripts/seed.sh"]
+        image: minio/mc:RELEASE.2024-11-21T17-21-54Z
+        command: ["/bin/sh", "/scripts/seed.sh"]
         env:
-        - name: AWS_ACCESS_KEY_ID
-          value: "test"
-        - name: AWS_SECRET_ACCESS_KEY
-          value: "test"
-        - name: AWS_DEFAULT_REGION
-          value: "us-west-2"
+        - name: MINIO_ENDPOINT
+          value: "http://minio.tig-airflow.svc.cluster.local:9000"
+        - name: MINIO_ROOT_USER
+          value: "minioadmin"
+        - name: MINIO_ROOT_PASSWORD
+          value: "minioadmin"
         volumeMounts:
         - name: seed-script
           mountPath: /scripts
@@ -42,64 +42,28 @@ metadata:
   namespace: tig-airflow
 data:
   seed.sh: |
-    #!/bin/bash
+    #!/bin/sh
     set -e
 
-    LOCALSTACK_ENDPOINT="http://localstack.tig-airflow.svc.cluster.local:4566"
     BUCKET="ids-pipeline"
-    TOPIC_NAME="ids-fdr-events"
-    QUEUE_NAME="ids-fdr-queue"
-    SNS_REGION="us-west-2"
-    SQS_REGION="us-west-2"
+    # Target id matches the MINIO_NOTIFY_AMQP_*_RABBITMQ env vars on the MinIO pod.
+    NOTIFY_ARN="arn:minio:sqs::RABBITMQ:amqp"
 
-    echo "=== Creating S3 bucket ==="
-    aws --endpoint-url=$LOCALSTACK_ENDPOINT s3 mb s3://$BUCKET --region $SNS_REGION || echo "Bucket already exists"
+    echo "=== Configuring mc alias ==="
+    mc alias set minio "$MINIO_ENDPOINT" "$MINIO_ROOT_USER" "$MINIO_ROOT_PASSWORD"
 
-    echo "=== Creating SNS topic ==="
-    TOPIC_ARN=$(aws --endpoint-url=$LOCALSTACK_ENDPOINT sns create-topic --name $TOPIC_NAME --region $SNS_REGION --query 'TopicArn' --output text)
-    echo "Topic ARN: $TOPIC_ARN"
+    echo "=== Creating bucket ==="
+    mc mb --ignore-existing "minio/$BUCKET"
 
-    echo "=== Creating SQS queue ==="
-    QUEUE_URL=$(aws --endpoint-url=$LOCALSTACK_ENDPOINT sqs create-queue --queue-name $QUEUE_NAME --region $SQS_REGION --query 'QueueUrl' --output text)
-    echo "Queue URL: $QUEUE_URL"
-
-    QUEUE_ARN=$(aws --endpoint-url=$LOCALSTACK_ENDPOINT sqs get-queue-attributes --queue-url $QUEUE_URL --attribute-names QueueArn --region $SQS_REGION --query 'Attributes.QueueArn' --output text)
-    echo "Queue ARN: $QUEUE_ARN"
-
-    echo "=== Setting SQS policy for SNS ==="
-    POLICY='{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":"*","Action":"sqs:SendMessage","Resource":"'$QUEUE_ARN'","Condition":{"ArnEquals":{"aws:SourceArn":"'$TOPIC_ARN'"}}}]}'
-    # Build attributes JSON with Policy value as an escaped JSON string (no jq/python in aws-cli image)
-    POLICY_ESCAPED=$(printf '%s' "$POLICY" | sed 's/"/\\"/g')
-    ATTRS_FILE=$(mktemp)
-    printf '{"Policy":"%s"}' "$POLICY_ESCAPED" > "$ATTRS_FILE"
-    aws --endpoint-url=$LOCALSTACK_ENDPOINT sqs set-queue-attributes --queue-url $QUEUE_URL --attributes "file://$ATTRS_FILE" --region $SQS_REGION
-
-    echo "=== Subscribing SQS to SNS ==="
-    SUB_ARN=$(aws --endpoint-url=$LOCALSTACK_ENDPOINT sns subscribe --topic-arn $TOPIC_ARN --protocol sqs --notification-endpoint $QUEUE_ARN --region $SNS_REGION --query 'SubscriptionArn' --output text)
-    echo "Subscription ARN: $SUB_ARN"
-
-    echo "=== Configuring S3 bucket notification ==="
-    NOTIFICATION_CONFIG='{
-      "TopicConfigurations": [{
-        "TopicArn": "'$TOPIC_ARN'",
-        "Events": ["s3:ObjectCreated:*"],
-        "Filter": {
-          "Key": {
-            "FilterRules": [{
-              "Name": "suffix",
-              "Value": ".VIC"
-            }]
-          }
-        }
-      }]
-    }'
-    aws --endpoint-url=$LOCALSTACK_ENDPOINT s3api put-bucket-notification-configuration --bucket $BUCKET --notification-configuration "$NOTIFICATION_CONFIG" --region $SNS_REGION
+    echo "=== Subscribing bucket to RabbitMQ (ObjectCreated, *.VIC) ==="
+    mc event remove "minio/$BUCKET" "$NOTIFY_ARN" --event put --suffix .VIC --force 2>/dev/null || true
+    mc event add "minio/$BUCKET" "$NOTIFY_ARN" --event put --suffix .VIC
+    mc event list "minio/$BUCKET"
 
     echo "=== Uploading sample FDR files ==="
-    aws --endpoint-url=$LOCALSTACK_ENDPOINT s3 cp /data/NLM_1835_0829848458_777FDR_N0874924NCAM00230_0A02LLJ01.VIC s3://$BUCKET/global_cache/1835/ncam/
-    aws --endpoint-url=$LOCALSTACK_ENDPOINT s3 cp /data/NRM_1835_0829848458_777FDR_N0874924NCAM00230_0A02LLJ01.VIC s3://$BUCKET/global_cache/1835/ncam/
+    mc cp /data/NLM_1835_0829848458_777FDR_N0874924NCAM00230_0A02LLJ01.VIC "minio/$BUCKET/global_cache/1835/ncam/"
+    mc cp /data/NRM_1835_0829848458_777FDR_N0874924NCAM00230_0A02LLJ01.VIC "minio/$BUCKET/global_cache/1835/ncam/"
 
     echo "=== Seed complete ==="
-    echo "Bucket: s3://$BUCKET"
-    echo "Topic: $TOPIC_ARN"
-    echo "Queue: $QUEUE_URL"
+    echo "Bucket: s3://$BUCKET  (endpoint $MINIO_ENDPOINT)"
+    echo "Events: $NOTIFY_ARN -> exchange ids-events -> queue ids-fdr-queue"
