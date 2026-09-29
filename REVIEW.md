@@ -1,15 +1,23 @@
 # Review Guidelines
 
-These guidelines add to the standard code review for the Terrain Intelligence
-Generator (TIG). Every pull request is checked against the three criteria below
-in addition to normal correctness, security, and style review.
+## Scope of these guidelines
 
-Each criterion has a **verdict**. Put the verdicts in a summary table at the top
-of the review (see [Reporting](#reporting)). If any criterion is **Fail**,
-request changes: the PR should not be approved until the finding is resolved or
-a maintainer explicitly waives it in the PR discussion.
+**Perform the full default review first.** Everything the standard review
+normally covers still applies to every pull request: correctness, bugs, edge
+cases, security, performance, error handling, readability, and style. Nothing in
+this file replaces, narrows, or lowers the priority of that review.
 
-| # | Criterion | A failing PR... |
+The sections below are **additional project requirements** for the Terrain
+Intelligence Generator (TIG). They reflect project policy for open-source
+contributions, and they are evaluated on top of the default review. A PR that
+passes these requirements can still have default-review findings, and the
+reverse is also true. Report both.
+
+Each additional requirement gets a **verdict**. If any requirement is
+**Fail**, request changes. The PR should not be approved until the finding is
+resolved or a maintainer explicitly waives it in the PR discussion.
+
+| # | Requirement | A failing PR... |
 | --- | --- | --- |
 | 1 | [Documentation parity](#1-documentation-parity) | changes user-facing behavior without updating the docs that describe it. **Blocking.** |
 | 2 | [Broad deployability](#2-broad-deployability) | ties a feature to one organization's infrastructure, credentials, or niche toolchain. |
@@ -197,17 +205,21 @@ Also check that:
 
 ## Reporting
 
-Start the review with a summary table, then give details for anything that is
-not **Pass**:
+Report the default review findings as usual. Then add a separate
+**Project Requirements** section with a summary table of the three verdicts,
+followed by details for anything that is not **Pass**:
 
 ```markdown
-| Criterion | Verdict | Notes |
+### Project Requirements
+
+| Requirement | Verdict | Notes |
 | --- | --- | --- |
 | 1. Documentation parity | Fail | `--foo` added to `tig` but not documented in `tig-cli/README.md` |
 | 2. Broad deployability | Pass | New option is configurable with a public default |
 | 3. Test coverage | Concern | No off-nominal test for an unreadable config file |
 ```
 
-For each finding, cite the file and line, explain why it matters to users, and
-suggest a concrete fix (the doc section to update, the configuration hook to
-add, or the test case to write).
+For each project-requirement finding, cite the file and line, explain why it
+matters to users, and suggest a concrete fix (the doc section to update, the
+configuration hook to add, or the test case to write). Do not drop or shorten
+default-review findings to make room for this section.
