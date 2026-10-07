@@ -34,6 +34,10 @@ not apply them. They are used only by this gate.
    | No verdict (API error, timeout, malformed output) | error |
    | Waived by a maintainer | success |
 
+   The comment always states the reason. When the gate cannot evaluate the
+   PR at all, for example because `DEVIN_ORG_ID` or `DEVIN_API_KEY` is not
+   set, the comment shows the error and how to fix it.
+
 A run takes as long as the Devin session, usually several minutes. Pushing
 again cancels the previous run.
 

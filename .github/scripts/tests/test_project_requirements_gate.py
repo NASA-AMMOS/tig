@@ -333,3 +333,32 @@ def test_workflow_org_id_missing_from_both_is_a_config_error(tmp_path):
     org_id = resolve_workflow_env("DEVIN_ORG_ID", {})
     with pytest.raises(gate.GateError, match="Missing configuration: DEVIN_ORG_ID"):
         make_config(tmp_path, DEVIN_ORG_ID=org_id)
+
+
+def test_report_setup_error_comments_and_sets_error_status(tmp_path):
+    env = {"GITHUB_REPOSITORY": "NASA-AMMOS/tig", "PR_NUMBER": "7", "GITHUB_TOKEN": "gh-token",
+           "GITHUB_RUN_ID": "99", "DEVIN_API_KEY": "devin-key"}
+    api = FakeApi()
+    gate.report_setup_error(env, "Missing configuration: DEVIN_ORG_ID", api)
+    status = api.statuses()[-1]
+    assert status["state"] == "error"
+    assert status["description"] == "Gate error: Missing configuration: DEVIN_ORG_ID"
+    comment = next(b for m, u, b in api.calls if m == "POST" and u.endswith("/issues/7/comments"))
+    assert "Project Requirements: ERROR" in comment["body"]
+    assert "Missing configuration: DEVIN_ORG_ID" in comment["body"]
+    assert gate.SETUP_DOC in comment["body"]
+
+
+def test_report_setup_error_without_github_access_only_warns(capsys):
+    api = FakeApi()
+    gate.report_setup_error({"PR_NUMBER": "7"}, "Missing configuration: GITHUB_TOKEN", api)
+    assert api.calls == []
+    assert "Could not report the configuration error" in capsys.readouterr().out
+
+
+def test_report_setup_error_survives_github_failure():
+    def failing_http(method, url, token, body=None):
+        raise gate.GateError("GET pulls returned HTTP 403")
+
+    env = {"GITHUB_REPOSITORY": "NASA-AMMOS/tig", "PR_NUMBER": "7", "GITHUB_TOKEN": "gh-token"}
+    gate.report_setup_error(env, "Missing configuration: DEVIN_ORG_ID", failing_http)
