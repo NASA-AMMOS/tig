@@ -362,3 +362,32 @@ def test_report_setup_error_survives_github_failure():
 
     env = {"GITHUB_REPOSITORY": "NASA-AMMOS/tig", "PR_NUMBER": "7", "GITHUB_TOKEN": "gh-token"}
     gate.report_setup_error(env, "Missing configuration: DEVIN_ORG_ID", failing_http)
+
+
+@pytest.mark.parametrize("overrides, removed, error", [
+    ({}, "DEVIN_ORG_ID", "Missing configuration: DEVIN_ORG_ID"),
+    ({}, "DEVIN_API_KEY", "Missing configuration: DEVIN_API_KEY"),
+    ({"DEVIN_MAX_ACU": "oops"}, None, "invalid literal for int()"),
+])
+def test_main_reports_configuration_errors_on_the_pr(monkeypatch, tmp_path, overrides, removed,
+                                                      error):
+    env = {"GITHUB_REPOSITORY": "NASA-AMMOS/tig", "PR_NUMBER": "7", "GITHUB_TOKEN": "gh-token",
+           "GITHUB_RUN_ID": "99", "DEVIN_API_KEY": "devin-key", "DEVIN_ORG_ID": "org-1",
+           "CRITERIA_PATH": str(tmp_path / "criteria.md"), **overrides}
+    for name in ("DEVIN_API_URL", "DEVIN_MAX_ACU", "DEVIN_TIMEOUT_MINUTES",
+                 "DEVIN_POLL_SECONDS", "GITHUB_API_URL", "GITHUB_SERVER_URL"):
+        monkeypatch.delenv(name, raising=False)
+    for name, value in env.items():
+        monkeypatch.setenv(name, value)
+    if removed:
+        monkeypatch.delenv(removed)
+    api = FakeApi()
+    assert gate.main(api) == 1
+    status = api.statuses()[-1]
+    assert status["state"] == "error"
+    assert status["description"].startswith("Gate error: ")
+    assert error in status["description"]
+    comment = next(b for m, u, b in api.calls if m == "POST" and u.endswith("/issues/7/comments"))
+    assert error in comment["body"]
+    assert gate.SETUP_DOC in comment["body"]
+    assert not any("api.devin.ai" in u for m, u, b in api.calls)

@@ -23,6 +23,7 @@ from typing import Callable, Dict, List, Optional, Tuple
 STATUS_CONTEXT = "Project Requirements"
 DEFAULT_CRITERIA_PATH = ".github/project-requirements/criteria.md"
 SETUP_DOC = "docs/reference/project-requirements-gate.md"
+DEVIN_NUMERIC_SETTINGS = ("DEVIN_MAX_ACU", "DEVIN_TIMEOUT_MINUTES", "DEVIN_POLL_SECONDS")
 COMMENT_MARKER = "<!-- tig-project-requirements-gate -->"
 VERDICTS = ("pass", "concern", "fail")
 REQUIREMENTS: Tuple[Tuple[str, str], ...] = (
@@ -481,8 +482,9 @@ def run(config: Config, github: GitHub, devin: Devin) -> int:
 
 def report_setup_error(env: Dict[str, str], message: str, http: Http = http_json) -> None:
     """Surface a configuration error on the PR when GitHub access is still available."""
+    github_env = {k: v for k, v in env.items() if k not in DEVIN_NUMERIC_SETTINGS}
     try:
-        config = Config.from_env(env, require_devin=False)
+        config = Config.from_env(github_env, require_devin=False)
         github = GitHub(config, http)
         sha = github.pull_request()["head"]["sha"]
         github.set_status(sha, "error", f"Gate error: {message}", config.run_url)
@@ -493,15 +495,15 @@ def report_setup_error(env: Dict[str, str], message: str, http: Http = http_json
         print(f"::warning::Could not report the configuration error on the PR: {err}")
 
 
-def main() -> int:
+def main(http: Http = http_json) -> int:
     env = dict(os.environ)
     try:
         config = Config.from_env(env)
     except (GateError, ValueError) as err:
         print(f"::error::{err}")
-        report_setup_error(env, str(err))
+        report_setup_error(env, str(err), http)
         return 1
-    return run(config, GitHub(config), Devin(config))
+    return run(config, GitHub(config, http), Devin(config, http))
 
 
 if __name__ == "__main__":
