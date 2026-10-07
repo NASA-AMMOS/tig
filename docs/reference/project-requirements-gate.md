@@ -34,6 +34,10 @@ not apply them. They are used only by this gate.
    | No verdict (API error, timeout, malformed output) | error |
    | Waived by a maintainer | success |
 
+   The comment always states the reason. When the gate cannot evaluate the
+   PR at all, for example because `DEVIN_ORG_ID` or `DEVIN_API_KEY` is not
+   set, the comment shows the error and how to fix it.
+
 A run takes as long as the Devin session, usually several minutes. Pushing
 again cancels the previous run.
 
@@ -51,7 +55,7 @@ Repository settings (**Settings > Secrets and variables > Actions**):
 | Name | Kind | Required | Purpose |
 | --- | --- | --- | --- |
 | `DEVIN_API_KEY` | Secret | Yes | Devin service user API key with permission to create sessions. |
-| `DEVIN_ORG_ID` | Variable | Yes | Devin organization ID (`org-...`) that sessions run in. |
+| `DEVIN_ORG_ID` | Variable (or secret) | Yes | Devin organization ID (`org-...`) that sessions run in. Read from the variable first, then the secret. |
 | `DEVIN_API_URL` | Variable | No | Devin API base URL. Defaults to `https://api.devin.ai`; set it for dedicated deployments. |
 | `PROJECT_REQUIREMENTS_MAX_ACU` | Variable | No | ACU limit per session. |
 | `PROJECT_REQUIREMENTS_WAIVER_LABEL` | Variable | No | Waiver label name. Defaults to `requirements-waived`. |

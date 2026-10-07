@@ -1,5 +1,6 @@
 import io
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -301,3 +302,92 @@ def test_http_json_raises_on_client_error_or_exhausted_retries(monkeypatch, erro
     with pytest.raises(gate.GateError, match="returned HTTP .*: boom"):
         gate.http_json("GET", "https://x", "tok", attempts=2)
     assert len(seen) == calls
+
+
+WORKFLOW = Path(__file__).resolve().parents[2] / "workflows" / "project-requirements.yml"
+
+
+def resolve_workflow_env(name, context):
+    """Evaluate a workflow env entry of the form `${{ a.B || c.D }}` against `context`."""
+    match = re.search(rf"^\s+{name}: \$\{{\{{(.+?)\}}\}}\s*$", WORKFLOW.read_text(), re.MULTILINE)
+    assert match, f"{name} not found in {WORKFLOW.name}"
+    for ref in match.group(1).split("||"):
+        scope, key = ref.strip().split(".", 1)
+        value = context.get(scope, {}).get(key, "")
+        if value:
+            return value
+    return ""
+
+
+@pytest.mark.parametrize("context, expected", [
+    ({"vars": {"DEVIN_ORG_ID": "org-var"}}, "org-var"),
+    ({"secrets": {"DEVIN_ORG_ID": "org-secret"}}, "org-secret"),
+    ({"vars": {"DEVIN_ORG_ID": "org-var"}, "secrets": {"DEVIN_ORG_ID": "org-secret"}}, "org-var"),
+])
+def test_workflow_org_id_accepts_variable_or_secret(tmp_path, context, expected):
+    org_id = resolve_workflow_env("DEVIN_ORG_ID", context)
+    assert make_config(tmp_path, DEVIN_ORG_ID=org_id).devin_org_id == expected
+
+
+def test_workflow_org_id_missing_from_both_is_a_config_error(tmp_path):
+    org_id = resolve_workflow_env("DEVIN_ORG_ID", {})
+    with pytest.raises(gate.GateError, match="Missing configuration: DEVIN_ORG_ID"):
+        make_config(tmp_path, DEVIN_ORG_ID=org_id)
+
+
+def test_report_setup_error_comments_and_sets_error_status(tmp_path):
+    env = {"GITHUB_REPOSITORY": "NASA-AMMOS/tig", "PR_NUMBER": "7", "GITHUB_TOKEN": "gh-token",
+           "GITHUB_RUN_ID": "99", "DEVIN_API_KEY": "devin-key"}
+    api = FakeApi()
+    gate.report_setup_error(env, "Missing configuration: DEVIN_ORG_ID", api)
+    status = api.statuses()[-1]
+    assert status["state"] == "error"
+    assert status["description"] == "Gate error: Missing configuration: DEVIN_ORG_ID"
+    comment = next(b for m, u, b in api.calls if m == "POST" and u.endswith("/issues/7/comments"))
+    assert "Project Requirements: ERROR" in comment["body"]
+    assert "Missing configuration: DEVIN_ORG_ID" in comment["body"]
+    assert gate.SETUP_DOC in comment["body"]
+
+
+def test_report_setup_error_without_github_access_only_warns(capsys):
+    api = FakeApi()
+    gate.report_setup_error({"PR_NUMBER": "7"}, "Missing configuration: GITHUB_TOKEN", api)
+    assert api.calls == []
+    assert "Could not report the configuration error" in capsys.readouterr().out
+
+
+def test_report_setup_error_survives_github_failure():
+    def failing_http(method, url, token, body=None):
+        raise gate.GateError("GET pulls returned HTTP 403")
+
+    env = {"GITHUB_REPOSITORY": "NASA-AMMOS/tig", "PR_NUMBER": "7", "GITHUB_TOKEN": "gh-token"}
+    gate.report_setup_error(env, "Missing configuration: DEVIN_ORG_ID", failing_http)
+
+
+@pytest.mark.parametrize("overrides, removed, error", [
+    ({}, "DEVIN_ORG_ID", "Missing configuration: DEVIN_ORG_ID"),
+    ({}, "DEVIN_API_KEY", "Missing configuration: DEVIN_API_KEY"),
+    ({"DEVIN_MAX_ACU": "oops"}, None, "invalid literal for int()"),
+])
+def test_main_reports_configuration_errors_on_the_pr(monkeypatch, tmp_path, overrides, removed,
+                                                      error):
+    env = {"GITHUB_REPOSITORY": "NASA-AMMOS/tig", "PR_NUMBER": "7", "GITHUB_TOKEN": "gh-token",
+           "GITHUB_RUN_ID": "99", "DEVIN_API_KEY": "devin-key", "DEVIN_ORG_ID": "org-1",
+           "CRITERIA_PATH": str(tmp_path / "criteria.md"), **overrides}
+    for name in ("DEVIN_API_URL", "DEVIN_MAX_ACU", "DEVIN_TIMEOUT_MINUTES",
+                 "DEVIN_POLL_SECONDS", "GITHUB_API_URL", "GITHUB_SERVER_URL"):
+        monkeypatch.delenv(name, raising=False)
+    for name, value in env.items():
+        monkeypatch.setenv(name, value)
+    if removed:
+        monkeypatch.delenv(removed)
+    api = FakeApi()
+    assert gate.main(api) == 1
+    status = api.statuses()[-1]
+    assert status["state"] == "error"
+    assert status["description"].startswith("Gate error: ")
+    assert error in status["description"]
+    comment = next(b for m, u, b in api.calls if m == "POST" and u.endswith("/issues/7/comments"))
+    assert error in comment["body"]
+    assert gate.SETUP_DOC in comment["body"]
+    assert not any("api.devin.ai" in u for m, u, b in api.calls)

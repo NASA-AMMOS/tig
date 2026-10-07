@@ -22,6 +22,8 @@ from typing import Callable, Dict, List, Optional, Tuple
 
 STATUS_CONTEXT = "Project Requirements"
 DEFAULT_CRITERIA_PATH = ".github/project-requirements/criteria.md"
+SETUP_DOC = "docs/reference/project-requirements-gate.md"
+DEVIN_NUMERIC_SETTINGS = ("DEVIN_MAX_ACU", "DEVIN_TIMEOUT_MINUTES", "DEVIN_POLL_SECONDS")
 COMMENT_MARKER = "<!-- tig-project-requirements-gate -->"
 VERDICTS = ("pass", "concern", "fail")
 REQUIREMENTS: Tuple[Tuple[str, str], ...] = (
@@ -89,13 +91,11 @@ class Config:
     poll_seconds: int
 
     @classmethod
-    def from_env(cls, env: Dict[str, str]) -> "Config":
-        missing = [
-            name
-            for name in ("GITHUB_REPOSITORY", "PR_NUMBER", "GITHUB_TOKEN",
-                         "DEVIN_API_KEY", "DEVIN_ORG_ID")
-            if not env.get(name)
-        ]
+    def from_env(cls, env: Dict[str, str], require_devin: bool = True) -> "Config":
+        required = ("GITHUB_REPOSITORY", "PR_NUMBER", "GITHUB_TOKEN")
+        if require_devin:
+            required += ("DEVIN_API_KEY", "DEVIN_ORG_ID")
+        missing = [name for name in required if not env.get(name)]
         if missing:
             raise GateError("Missing configuration: " + ", ".join(missing))
         server = env.get("GITHUB_SERVER_URL", "https://github.com")
@@ -109,8 +109,8 @@ class Config:
             github_token=env["GITHUB_TOKEN"],
             github_api_url=env.get("GITHUB_API_URL", "https://api.github.com").rstrip("/"),
             run_url=run_url,
-            devin_api_key=env["DEVIN_API_KEY"],
-            devin_org_id=env["DEVIN_ORG_ID"],
+            devin_api_key=env.get("DEVIN_API_KEY", ""),
+            devin_org_id=env.get("DEVIN_ORG_ID", ""),
             devin_api_url=(env.get("DEVIN_API_URL") or "https://api.devin.ai").rstrip("/"),
             criteria_path=Path(env.get("CRITERIA_PATH") or DEFAULT_CRITERIA_PATH),
             waiver_label=env.get("WAIVER_LABEL") or "requirements-waived",
@@ -480,13 +480,30 @@ def run(config: Config, github: GitHub, devin: Devin) -> int:
     return 0 if state == "success" else 1
 
 
-def main() -> int:
+def report_setup_error(env: Dict[str, str], message: str, http: Http = http_json) -> None:
+    """Surface a configuration error on the PR when GitHub access is still available."""
+    github_env = {k: v for k, v in env.items() if k not in DEVIN_NUMERIC_SETTINGS}
     try:
-        config = Config.from_env(dict(os.environ))
+        config = Config.from_env(github_env, require_devin=False)
+        github = GitHub(config, http)
+        sha = github.pull_request()["head"]["sha"]
+        github.set_status(sha, "error", f"Gate error: {message}", config.run_url)
+        github.upsert_comment(render_error(
+            f"{message}. Set it under Settings > Secrets and variables > Actions "
+            f"(see {SETUP_DOC}).", sha, config.run_url))
+    except (GateError, OSError, ValueError, KeyError, TypeError) as err:
+        print(f"::warning::Could not report the configuration error on the PR: {err}")
+
+
+def main(http: Http = http_json) -> int:
+    env = dict(os.environ)
+    try:
+        config = Config.from_env(env)
     except (GateError, ValueError) as err:
         print(f"::error::{err}")
+        report_setup_error(env, str(err), http)
         return 1
-    return run(config, GitHub(config), Devin(config))
+    return run(config, GitHub(config, http), Devin(config, http))
 
 
 if __name__ == "__main__":
