@@ -1,3 +1,4 @@
+import io
 import json
 import sys
 from pathlib import Path
@@ -244,3 +245,58 @@ def test_run_skips_drafts(tmp_path):
     api = FakeApi(draft=True)
     assert gate.run(config, *make_gate(config, api)) == 0
     assert api.statuses() == []
+
+
+class FakeResponse:
+    def __init__(self, payload):
+        self.payload = payload
+        self.headers = {"X-Test": "1"}
+
+    def read(self):
+        return json.dumps(self.payload).encode()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        return False
+
+
+def http_error(code):
+    return gate.urllib.error.HTTPError("https://x", code, "err", {}, io.BytesIO(b"boom"))
+
+
+def test_http_json_retries_server_errors(monkeypatch):
+    outcomes = [http_error(502), gate.urllib.error.URLError("reset"), FakeResponse({"ok": 1})]
+    requests = []
+
+    def fake_urlopen(request, timeout):
+        requests.append(request)
+        outcome = outcomes.pop(0)
+        if isinstance(outcome, Exception):
+            raise outcome
+        return outcome
+
+    monkeypatch.setattr(gate.urllib.request, "urlopen", fake_urlopen)
+    monkeypatch.setattr(gate.time, "sleep", lambda s: None)
+    data, headers = gate.http_json("POST", "https://x", "tok", {"a": 1})
+    assert data == {"ok": 1} and headers == {"X-Test": "1"}
+    assert len(requests) == 3
+    assert requests[0].get_header("Authorization") == "Bearer tok"
+    assert requests[0].get_header("Content-type") == "application/json"
+
+
+@pytest.mark.parametrize("errors, calls", [([http_error(404)], 1),
+                                           ([http_error(500)] * 2, 2)])
+def test_http_json_raises_on_client_error_or_exhausted_retries(monkeypatch, errors, calls):
+    seen = []
+
+    def fake_urlopen(request, timeout):
+        seen.append(request)
+        raise errors[len(seen) - 1]
+
+    monkeypatch.setattr(gate.urllib.request, "urlopen", fake_urlopen)
+    monkeypatch.setattr(gate.time, "sleep", lambda s: None)
+    with pytest.raises(gate.GateError, match="returned HTTP .*: boom"):
+        gate.http_json("GET", "https://x", "tok", attempts=2)
+    assert len(seen) == calls

@@ -56,7 +56,7 @@ _REQUIREMENT_SCHEMA = {
 OUTPUT_SCHEMA = {
     "type": "object",
     "properties": {
-        **{key: _REQUIREMENT_SCHEMA for key, _ in REQUIREMENTS},
+        **dict.fromkeys((key for key, _ in REQUIREMENTS), _REQUIREMENT_SCHEMA),
         "summary": {"type": "string"},
     },
     "required": [key for key, _ in REQUIREMENTS] + ["summary"],
@@ -118,30 +118,43 @@ class Config:
 Http = Callable[[str, str, str, Optional[dict]], Tuple[object, Dict[str, str]]]
 
 
-def http_json(method: str, url: str, token: str, body: Optional[dict] = None,
-              attempts: int = 4) -> Tuple[object, Dict[str, str]]:
-    data = json.dumps(body).encode() if body is not None else None
+def _request_headers(token: str, has_body: bool) -> Dict[str, str]:
     headers = {
         "Authorization": f"Bearer {token}",
         "Accept": "application/json",
         "User-Agent": "tig-project-requirements-gate",
     }
-    if data is not None:
+    if has_body:
         headers["Content-Type"] = "application/json"
+    return headers
+
+
+def _send(request: urllib.request.Request, final: bool) -> Optional[Tuple[object, Dict[str, str]]]:
+    """One attempt. Returns None when the error is retryable and attempts remain."""
+    label = f"{request.get_method()} {request.full_url}"
+    try:
+        with urllib.request.urlopen(request, timeout=60) as response:
+            raw = response.read()
+            return (json.loads(raw) if raw else None), dict(response.headers)
+    except urllib.error.HTTPError as err:
+        if final or not (err.code == 429 or err.code >= 500):
+            detail = err.read().decode(errors="replace")[:500]
+            raise GateError(f"{label} returned HTTP {err.code}: {detail}") from err
+    except urllib.error.URLError as err:
+        if final:
+            raise GateError(f"{label} failed: {err.reason}") from err
+    return None
+
+
+def http_json(method: str, url: str, token: str, body: Optional[dict] = None,
+              attempts: int = 4) -> Tuple[object, Dict[str, str]]:
+    data = json.dumps(body).encode() if body is not None else None
+    headers = _request_headers(token, data is not None)
     for attempt in range(1, attempts + 1):
         request = urllib.request.Request(url, data=data, headers=headers, method=method)
-        try:
-            with urllib.request.urlopen(request, timeout=60) as response:
-                raw = response.read()
-                return (json.loads(raw) if raw else None), dict(response.headers)
-        except urllib.error.HTTPError as err:
-            retryable = err.code == 429 or err.code >= 500
-            if not retryable or attempt == attempts:
-                detail = err.read().decode(errors="replace")[:500]
-                raise GateError(f"{method} {url} returned HTTP {err.code}: {detail}") from err
-        except urllib.error.URLError as err:
-            if attempt == attempts:
-                raise GateError(f"{method} {url} failed: {err.reason}") from err
+        result = _send(request, final=attempt == attempts)
+        if result is not None:
+            return result
         time.sleep(2 ** attempt)
     raise GateError(f"{method} {url} failed")
 
