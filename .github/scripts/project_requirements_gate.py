@@ -44,19 +44,24 @@ _FINDING_SCHEMA = {
     },
     "required": ["file", "issue", "fix"],
 }
-_REQUIREMENT_SCHEMA = {
-    "type": "object",
-    "properties": {
-        "verdict": {"type": "string", "enum": list(VERDICTS)},
-        "summary": {"type": "string"},
-        "findings": {"type": "array", "items": _FINDING_SCHEMA},
-    },
-    "required": ["verdict", "summary", "findings"],
-}
+
+
+def _requirement_schema() -> dict:
+    return {
+        "type": "object",
+        "properties": {
+            "verdict": {"type": "string", "enum": list(VERDICTS)},
+            "summary": {"type": "string"},
+            "findings": {"type": "array", "items": _FINDING_SCHEMA},
+        },
+        "required": ["verdict", "summary", "findings"],
+    }
+
+
 OUTPUT_SCHEMA = {
     "type": "object",
     "properties": {
-        **dict.fromkeys((key for key, _ in REQUIREMENTS), _REQUIREMENT_SCHEMA),
+        **{key: _requirement_schema() for key, _ in REQUIREMENTS},
         "summary": {"type": "string"},
     },
     "required": [key for key, _ in REQUIREMENTS] + ["summary"],

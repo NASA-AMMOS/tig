@@ -280,7 +280,8 @@ def test_http_json_retries_server_errors(monkeypatch):
     monkeypatch.setattr(gate.urllib.request, "urlopen", fake_urlopen)
     monkeypatch.setattr(gate.time, "sleep", lambda s: None)
     data, headers = gate.http_json("POST", "https://x", "tok", {"a": 1})
-    assert data == {"ok": 1} and headers == {"X-Test": "1"}
+    assert data == {"ok": 1}
+    assert headers == {"X-Test": "1"}
     assert len(requests) == 3
     assert requests[0].get_header("Authorization") == "Bearer tok"
     assert requests[0].get_header("Content-type") == "application/json"
