@@ -1,0 +1,35 @@
+name: Project Requirements Gate Tests
+
+# Unit tests for the gate script. The gate itself runs from the base branch,
+# so changes to the script are only exercised here until they merge.
+
+on:
+  push:
+    branches: ["**"]
+    paths:
+      - ".github/scripts/**"
+      - ".github/workflows/project-requirements-tests.yml"
+  pull_request:
+    branches: ["**"]
+    paths:
+      - ".github/scripts/**"
+      - ".github/workflows/project-requirements-tests.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Gate script tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.9'
+
+      - name: Run tests
+        run: |
+          python -m pip install --upgrade pip pytest
+          python -m pytest .github/scripts/tests -v

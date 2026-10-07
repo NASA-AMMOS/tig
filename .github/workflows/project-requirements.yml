@@ -1,0 +1,62 @@
+name: Project Requirements
+
+# Targeted PR gate: a Devin session evaluates the PR against the three project
+# requirements in .github/project-requirements/criteria.md (documentation
+# parity, broad deployability, test coverage) and the gate script sets the
+# "Project Requirements" commit status that branch protection requires.
+# Setup and waivers: docs/reference/project-requirements-gate.md
+#
+# pull_request_target so fork PRs can use DEVIN_API_KEY. It checks out the
+# base branch only - the gate script and criteria always come from the trusted
+# base, never from the PR. Do not add a checkout of the PR head here.
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened, ready_for_review, labeled, unlabeled]
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: 'Pull request number to evaluate'
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  gate:
+    name: Project Requirements
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.action != 'labeled' && github.event.action != 'unlabeled') ||
+      github.event.label.name == (vars.PROJECT_REQUIREMENTS_WAIVER_LABEL || 'requirements-waived')
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    permissions:
+      contents: read
+      issues: read
+      pull-requests: write
+      statuses: write
+    concurrency:
+      group: project-requirements-${{ github.event.pull_request.number || inputs.pr_number }}
+      cancel-in-progress: true
+
+    steps:
+      - name: Checkout base branch
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Evaluate project requirements
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number || inputs.pr_number }}
+          DEVIN_API_KEY: ${{ secrets.DEVIN_API_KEY }}
+          DEVIN_ORG_ID: ${{ vars.DEVIN_ORG_ID }}
+          DEVIN_API_URL: ${{ vars.DEVIN_API_URL }}
+          DEVIN_MAX_ACU: ${{ vars.PROJECT_REQUIREMENTS_MAX_ACU }}
+          WAIVER_LABEL: ${{ vars.PROJECT_REQUIREMENTS_WAIVER_LABEL }}
+        run: python .github/scripts/project_requirements_gate.py

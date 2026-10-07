@@ -25,6 +25,7 @@ New here? Start with **[Getting Started](getting-started.md)**.
 ### Reference
 - **[Vicario](reference/vicario.md)** — Java VicarIO library for VICAR image-format conversion.
 - **[Calibration Data](reference/calibration-data.md)** — Mounting MARS/VISOR calibration files.
+- **[Project Requirements Gate](reference/project-requirements-gate.md)** — The PR check for documentation parity, broad deployability and test coverage.
 
 ### Examples
 - **[MMGIS Integration](../examples/mmgis-integration/README.md)** — Turning a TIG mosaic and terrain mesh into rendered layers in NASA-AMMOS MMGIS.
