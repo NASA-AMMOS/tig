@@ -55,7 +55,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ github.event.pull_request.number || inputs.pr_number }}
           DEVIN_API_KEY: ${{ secrets.DEVIN_API_KEY }}
-          DEVIN_ORG_ID: ${{ vars.DEVIN_ORG_ID }}
+          DEVIN_ORG_ID: ${{ vars.DEVIN_ORG_ID || secrets.DEVIN_ORG_ID }}
           DEVIN_API_URL: ${{ vars.DEVIN_API_URL }}
           DEVIN_MAX_ACU: ${{ vars.PROJECT_REQUIREMENTS_MAX_ACU }}
           WAIVER_LABEL: ${{ vars.PROJECT_REQUIREMENTS_WAIVER_LABEL }}

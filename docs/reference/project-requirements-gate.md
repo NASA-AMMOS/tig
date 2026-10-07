@@ -51,7 +51,7 @@ Repository settings (**Settings > Secrets and variables > Actions**):
 | Name | Kind | Required | Purpose |
 | --- | --- | --- | --- |
 | `DEVIN_API_KEY` | Secret | Yes | Devin service user API key with permission to create sessions. |
-| `DEVIN_ORG_ID` | Variable | Yes | Devin organization ID (`org-...`) that sessions run in. |
+| `DEVIN_ORG_ID` | Variable (or secret) | Yes | Devin organization ID (`org-...`) that sessions run in. Read from the variable first, then the secret. |
 | `DEVIN_API_URL` | Variable | No | Devin API base URL. Defaults to `https://api.devin.ai`; set it for dedicated deployments. |
 | `PROJECT_REQUIREMENTS_MAX_ACU` | Variable | No | ACU limit per session. |
 | `PROJECT_REQUIREMENTS_WAIVER_LABEL` | Variable | No | Waiver label name. Defaults to `requirements-waived`. |
