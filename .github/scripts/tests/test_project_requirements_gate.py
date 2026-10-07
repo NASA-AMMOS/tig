@@ -1,5 +1,6 @@
 import io
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -301,3 +302,34 @@ def test_http_json_raises_on_client_error_or_exhausted_retries(monkeypatch, erro
     with pytest.raises(gate.GateError, match="returned HTTP .*: boom"):
         gate.http_json("GET", "https://x", "tok", attempts=2)
     assert len(seen) == calls
+
+
+WORKFLOW = Path(__file__).resolve().parents[2] / "workflows" / "project-requirements.yml"
+
+
+def resolve_workflow_env(name, context):
+    """Evaluate a workflow env entry of the form `${{ a.B || c.D }}` against `context`."""
+    match = re.search(rf"^\s+{name}: \$\{{\{{(.+?)\}}\}}\s*$", WORKFLOW.read_text(), re.MULTILINE)
+    assert match, f"{name} not found in {WORKFLOW.name}"
+    for ref in match.group(1).split("||"):
+        scope, key = ref.strip().split(".", 1)
+        value = context.get(scope, {}).get(key, "")
+        if value:
+            return value
+    return ""
+
+
+@pytest.mark.parametrize("context, expected", [
+    ({"vars": {"DEVIN_ORG_ID": "org-var"}}, "org-var"),
+    ({"secrets": {"DEVIN_ORG_ID": "org-secret"}}, "org-secret"),
+    ({"vars": {"DEVIN_ORG_ID": "org-var"}, "secrets": {"DEVIN_ORG_ID": "org-secret"}}, "org-var"),
+])
+def test_workflow_org_id_accepts_variable_or_secret(tmp_path, context, expected):
+    org_id = resolve_workflow_env("DEVIN_ORG_ID", context)
+    assert make_config(tmp_path, DEVIN_ORG_ID=org_id).devin_org_id == expected
+
+
+def test_workflow_org_id_missing_from_both_is_a_config_error(tmp_path):
+    org_id = resolve_workflow_env("DEVIN_ORG_ID", {})
+    with pytest.raises(gate.GateError, match="Missing configuration: DEVIN_ORG_ID"):
+        make_config(tmp_path, DEVIN_ORG_ID=org_id)

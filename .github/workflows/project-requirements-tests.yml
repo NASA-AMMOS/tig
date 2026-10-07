@@ -9,11 +9,13 @@ on:
     paths:
       - ".github/scripts/**"
       - ".github/workflows/project-requirements-tests.yml"
+      - ".github/workflows/project-requirements.yml"
   pull_request:
     branches: ["**"]
     paths:
       - ".github/scripts/**"
       - ".github/workflows/project-requirements-tests.yml"
+      - ".github/workflows/project-requirements.yml"
 
 permissions:
   contents: read
