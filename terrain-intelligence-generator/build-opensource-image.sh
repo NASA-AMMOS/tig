@@ -36,14 +36,9 @@ if [ ! -f "${DOCKER_DIR}/Dockerfile" ]; then
     exit 1
 fi
 
-if [ ! -f "${DOCKER_DIR}/vicario.jar" ]; then
-    echo -e "${RED}ERROR: vicario.jar not found in ${DOCKER_DIR}${NC}"
-    exit 1
-fi
-
 # Build the image
 echo -e "${YELLOW}Building Docker image...${NC}"
-echo "This will download pre-built binaries from GitHub releases."
+echo "This will download pre-built binaries from GitHub releases and vicario from Maven Central."
 echo "Estimated build time: 5-10 minutes (depending on network speed)."
 echo ""
 
