@@ -10,30 +10,21 @@ output file exists. In particular, keyword syntax with only two arguments
 (`vicario inp=input.vic out=output.png`) is read positionally and treats
 `inp=input.vic` as a filename; use the positional form for two arguments.
 
-## Obtaining vicario.jar
+## Obtaining vicario
 
-The image ships a prebuilt `vicario.jar`, so nothing needs to be built to use
-`vicario` in the container.
+VicarIO is open source at [NASA-AMMOS/vicario](https://github.com/NASA-AMMOS/vicario)
+and published to Maven Central as
+[`gov.nasa.jpl.ammos.ids:vicario`](https://central.sonatype.com/artifact/gov.nasa.jpl.ammos.ids/vicario).
+The image build resolves it, so nothing needs to be built or downloaded by
+hand to use `vicario` in the container.
 
-### Build from Source
-
-The VicarIO source is **not yet public** — there is no repository to clone at
-this time, so building from source is not currently possible outside JPL. When
-source access is available, the build is:
-
-1. Build the FAT JAR (includes all dependencies) in the VicarIO source tree:
-   ```bash
-   mvn -U -Pshade clean install
-   ```
-
-2. Copy the JAR to the Docker build context:
-   ```bash
-   cp target/vicario-*-FAT.jar /path/to/tig/terrain-intelligence-generator/docker/vicario.jar
-   ```
+The version is pinned in `terrain-intelligence-generator/docker/vicario/pom.xml`.
+A `vicario` stage in the Dockerfile copies that version and its runtime
+dependencies to `/usr/local/lib/vicario/`, and the `vicario` wrapper runs
+`jpl.mipl.io.jConvertIIO` on that classpath with Java 17. To move to a new
+release, change `version.vicario` in that POM and rebuild the image.
 
 ## Building the Docker Image
-
-Once `vicario.jar` is in place:
 
 ```bash
 cd terrain-intelligence-generator/docker
