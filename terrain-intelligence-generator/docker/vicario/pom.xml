@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Resolves the VicarIO converter and its runtime dependencies for the image.
+  VicarIO is open source (https://github.com/NASA-AMMOS/vicario) and published
+  to Maven Central; its POM declares the OSGeo and imageio-ext repositories it
+  needs for JAI. The Dockerfile runs:
+
+    mvn dependency:copy-dependencies -DincludeScope=runtime -DoutputDirectory=...
+
+  and the vicario wrapper runs jpl.mipl.io.jConvertIIO on that classpath.
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>gov.nasa.jpl.ammos.tig</groupId>
+    <artifactId>tig-vicario-runtime</artifactId>
+    <version>1.0.0</version>
+    <packaging>pom</packaging>
+
+    <properties>
+        <version.vicario>2.7.2</version.vicario>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>gov.nasa.jpl.ammos.ids</groupId>
+            <artifactId>vicario</artifactId>
+            <version>${version.vicario}</version>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-dependency-plugin</artifactId>
+                    <version>3.8.1</version>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+    </build>
+</project>

@@ -110,7 +110,7 @@ Specialized Mars terrain processing suite:
 
 ### Vicario (Java)
 - **Purpose**: VICAR format conversion (VICAR ↔ standard formats)
-- **Technology**: Java 11 + Java Advanced Imaging
+- **Technology**: Java 17 + Java Advanced Imaging; [NASA-AMMOS/vicario](https://github.com/NASA-AMMOS/vicario) from Maven Central
 - **Features**: 
   - Dynamic range rescaling (16-bit → 8-bit)
   - Format support: PNG, JPEG, TIFF (read and write)
@@ -192,7 +192,7 @@ Base Layer: Oracle Linux 8
     ↓
 Builder Stage: downloads pre-built VICAR + external library releases
     ↓
-Runtime Layer: VICAR binaries (546 commands) + MARS tools (74) + Java + vicario.jar
+Runtime Layer: VICAR binaries (546 commands) + MARS tools (74) + Java + vicario (Maven Central)
     ↓
 Command Wrappers: 546 CLI wrappers generated under /usr/local/bin
     ↓

@@ -81,7 +81,20 @@ RUN echo "Downloading VICAR external libraries..." && \
     echo "✓ Cleaned $(du -sh /vicar/external | cut -f1) remaining"
 
 # ============================================================================
-# Stage 2: Runtime - Build final image with only necessary files
+# Stage 2: VicarIO - Resolve the VICAR format converter from Maven Central
+# ============================================================================
+# VicarIO is open source (https://github.com/NASA-AMMOS/vicario) and published
+# to Maven Central as gov.nasa.jpl.ammos.ids:vicario. vicario/pom.xml pins the
+# version; this stage copies it and its runtime dependencies into one directory.
+FROM maven:3.9.9-eclipse-temurin-17 AS vicario
+
+COPY vicario/pom.xml /build/pom.xml
+RUN mvn -B -q -f /build/pom.xml dependency:copy-dependencies \
+        -DincludeScope=runtime -DoutputDirectory=/opt/vicario/lib && \
+    ls /opt/vicario/lib/vicario-*.jar
+
+# ============================================================================
+# Stage 3: Runtime - Build final image with only necessary files
 # ============================================================================
 FROM oraclelinux:8
 
@@ -139,8 +152,8 @@ RUN dnf -y --nogpgcheck --setopt=install_weak_deps=False --setopt=tsflags=nodocs
     xauth \
     # Motif runtime
     motif \
-    # Java runtime (Java 11 headless for vicario.jar)
-    java-11-openjdk-headless \
+    # Java runtime for vicario (17: its pds4-jparser dependency targets Java 17)
+    java-17-openjdk-headless \
     # Image processing runtime libraries
     libtiff \
     libpng \
@@ -178,8 +191,8 @@ RUN mkdir -p ${WORKSPACE}/dev ${WORKSPACE}/build/{java,html/{bin,xsl}}
 COPY --from=builder /vicar/dev ${WORKSPACE}/dev
 COPY --from=builder /vicar/external ${WORKSPACE}/external
 
-# Copy Java vicario JAR and create wrapper script
-COPY --chown=root:root vicario.jar /usr/local/bin/vicario.jar
+# Copy the VicarIO classpath and create wrapper script
+COPY --from=vicario --chown=root:root /opt/vicario/lib /usr/local/lib/vicario
 
 # Shared exit-code translation used by every generated wrapper below
 COPY --chown=root:root vicar-run /usr/local/libexec/vicar-run
@@ -188,7 +201,9 @@ RUN chmod +x /usr/local/libexec/vicar-run
 # Create vicario wrapper script that uses Java in headless mode
 RUN echo '#!/bin/bash' > /usr/local/bin/vicario && \
     echo '# vicario wrapper - calls Java vicario in headless mode (no X11 required)' >> /usr/local/bin/vicario && \
-    echo 'VICARIO_JAR="/usr/local/bin/vicario.jar"' >> /usr/local/bin/vicario && \
+    echo 'VICARIO_CP="/usr/local/lib/vicario/*"' >> /usr/local/bin/vicario && \
+    echo '# disableMediaLib: the native mediaLib accelerator is not installed' >> /usr/local/bin/vicario && \
+    echo 'VICARIO_JAVA_OPTS="-Djava.awt.headless=true -Dcom.sun.media.jai.disableMediaLib=true"' >> /usr/local/bin/vicario && \
     echo '' >> /usr/local/bin/vicario && \
     echo '# Temporary files for filtering output' >> /usr/local/bin/vicario && \
     echo 'TMPOUT=$(mktemp)' >> /usr/local/bin/vicario && \
@@ -203,10 +218,10 @@ RUN echo '#!/bin/bash' > /usr/local/bin/vicario && \
     echo '    EXT="${OUT##*.}"' >> /usr/local/bin/vicario && \
     echo '    FORMAT=$(echo "$EXT" | tr '"'"'[:upper:]'"'"' '"'"'[:lower:]'"'"')' >> /usr/local/bin/vicario && \
     echo '    # Run Java vicario in headless mode' >> /usr/local/bin/vicario && \
-    echo '    java -Djava.awt.headless=true -jar "$VICARIO_JAR" inp="$INP" out="$OUT" format="$FORMAT" oform=byte rescale=true > $TMPOUT 2> $TMPERR' >> /usr/local/bin/vicario && \
+    echo '    java $VICARIO_JAVA_OPTS -cp "$VICARIO_CP" jpl.mipl.io.jConvertIIO inp="$INP" out="$OUT" format="$FORMAT" oform=byte rescale=true > $TMPOUT 2> $TMPERR' >> /usr/local/bin/vicario && \
     echo 'else' >> /usr/local/bin/vicario && \
     echo '    # Pass through all arguments as-is' >> /usr/local/bin/vicario && \
-    echo '    java -Djava.awt.headless=true -jar "$VICARIO_JAR" "$@" > $TMPOUT 2> $TMPERR' >> /usr/local/bin/vicario && \
+    echo '    java $VICARIO_JAVA_OPTS -cp "$VICARIO_CP" jpl.mipl.io.jConvertIIO "$@" > $TMPOUT 2> $TMPERR' >> /usr/local/bin/vicario && \
     echo 'fi' >> /usr/local/bin/vicario && \
     echo '' >> /usr/local/bin/vicario && \
     echo 'EXIT_CODE=$?' >> /usr/local/bin/vicario && \

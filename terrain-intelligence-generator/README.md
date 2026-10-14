@@ -5,8 +5,8 @@ published on [NASA-AMMOS/VICAR](https://github.com/NASA-AMMOS/VICAR) releases,
 plus the Java `vicario` converter.
 
 ```
-docker/Dockerfile          Multi-stage build (builder + runtime)
-docker/vicario.jar         Java VICAR→PNG/JPEG/TIFF converter (see docker/VICARIO.md)
+docker/Dockerfile          Multi-stage build (builder + vicario + runtime)
+docker/vicario/pom.xml     Pins the Java VICAR→PNG/JPEG/TIFF converter from Maven Central (see docker/VICARIO.md)
 builder/Dockerfile         Build environment for compiling VICAR units from source
 builder/vicar-build        vimake + make for one unit, run inside the builder image
 build-opensource-image.sh  Local build, mirrors CI
