@@ -513,7 +513,7 @@ def test_a_relative_home_is_made_absolute(home, monkeypatch):
 
     address = server.broker_address(CONTAINER, ".")
 
-    assert address == broker.socket_path(str(home), CONTAINER)
+    assert address == broker.socket_path(os.getcwd(), CONTAINER)
 
 
 def test_the_broker_command_exits_unavailable_on_a_traversing_container(home):
