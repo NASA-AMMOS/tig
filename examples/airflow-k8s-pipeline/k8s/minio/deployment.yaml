@@ -78,9 +78,10 @@ spec:
           limits:
             memory: "1Gi"
             cpu: "500m"
-            # Covers the /data emptyDir, which holds every object in the demo bucket.
-            ephemeral-storage: "4Gi"
+            # Covers the /data emptyDir, which holds every object in the demo bucket
+            # (~260 MiB per stereo-pair run); half of minikube's default 20 GB disk.
+            ephemeral-storage: "10Gi"
       volumes:
       - name: data
         emptyDir:
-          sizeLimit: 4Gi
+          sizeLimit: 10Gi
