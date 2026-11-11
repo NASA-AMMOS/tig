@@ -936,6 +936,76 @@ def test_releasing_the_claim_makes_the_container_reapable(home_dir):
     manager.release_claim()  # idempotent
 
 
+def test_the_claim_directory_is_private_to_the_user(home_dir):
+    claim = spec.Claim()
+    claim.acquire("tig-vicar-private")
+
+    info = os.lstat(spec.Claim.directory())
+    assert info.st_mode & 0o777 == 0o700
+    assert info.st_uid == os.getuid()
+    assert claim.path.exists()
+
+
+def test_an_open_claim_directory_of_the_users_own_is_closed(home_dir):
+    directory = spec.Claim.directory()
+    directory.mkdir(parents=True)
+    directory.chmod(0o777)
+
+    claim = spec.Claim()
+    claim.acquire("tig-vicar-open")
+
+    assert os.lstat(directory).st_mode & 0o777 == 0o700
+    assert claim.path is not None
+
+
+def test_a_symlink_in_place_of_the_claim_directory_is_not_trusted(
+    home_dir, tmp_path
+):
+    elsewhere = tmp_path / "elsewhere"
+    elsewhere.mkdir()
+    (elsewhere / f"tig-vicar-planted.{os.getpid()}").touch()
+    spec.Claim.directory().symlink_to(elsewhere)
+
+    claim = spec.Claim()
+    claim.acquire("tig-vicar-linked")
+
+    assert claim.path is None
+    assert list(elsewhere.iterdir()) == [
+        elsewhere / f"tig-vicar-planted.{os.getpid()}"
+    ]
+    assert spec.Claim.claimed_containers() == set()
+
+
+def test_a_claim_directory_owned_by_another_user_is_not_trusted(
+    home_dir, monkeypatch
+):
+    other = os.getuid() + 1
+    monkeypatch.setattr(spec.os, "getuid", lambda: other)
+    directory = spec.Claim.directory()
+    directory.mkdir(mode=0o700)
+    (directory / f"tig-vicar-planted.{os.getpid()}").touch()
+
+    claim = spec.Claim()
+    claim.acquire("tig-vicar-foreign")
+
+    assert claim.path is None
+    assert spec.Claim.claimed_containers() == set()
+
+
+def test_claims_fall_back_to_the_temporary_directory(
+    home_dir, tmp_path, monkeypatch
+):
+    import tempfile
+
+    monkeypatch.delenv("XDG_RUNTIME_DIR", raising=False)
+    monkeypatch.setenv("TMPDIR", str(tmp_path))
+    monkeypatch.setattr(tempfile, "tempdir", None)
+
+    assert spec.Claim.directory() == (
+        tmp_path / f"{spec.CLAIM_DIR_NAME}-{os.getuid()}"
+    )
+
+
 def test_reaping_tolerates_a_container_removed_concurrently(home_dir):
     runtime = FakeRuntime({
         f"{CONTAINER_PREFIX}-a": described(),

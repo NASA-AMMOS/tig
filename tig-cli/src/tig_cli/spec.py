@@ -11,6 +11,7 @@ import hashlib
 import json
 import os
 import signal
+import stat
 import sys
 from pathlib import Path
 from .config import (
@@ -658,20 +659,53 @@ class Claim:
 
     @staticmethod
     def directory() -> Path:
-        base = (
-            os.environ.get("XDG_RUNTIME_DIR")
-            or os.environ.get("TMPDIR")
-            or "/tmp"
-        )
+        base = os.environ.get("XDG_RUNTIME_DIR")
+        if not base:
+            # Imported only here: the warm path almost always has a runtime
+            # directory, and tempfile is comparatively slow to import.
+            import tempfile
+
+            base = tempfile.gettempdir()
         return Path(base) / f"{CLAIM_DIR_NAME}-{os.getuid()}"
+
+    @classmethod
+    def _private_directory(cls, create: bool) -> Path | None:
+        """The claim directory, if it is safe to trust.
+
+        The fallback base is shared and world-writable, so another user could
+        have made the directory first, or a symlink in its place, to plant or
+        delete claims. Only a real directory owned by this user and closed to
+        everyone else is used.
+        """
+        directory = cls.directory()
+        if create:
+            try:
+                directory.mkdir(mode=0o700, parents=True)
+            except FileExistsError:
+                pass
+            except OSError:
+                return None
+        try:
+            info = os.lstat(directory)
+        except OSError:
+            return None
+        if not stat.S_ISDIR(info.st_mode) or info.st_uid != os.getuid():
+            return None
+        if stat.S_IMODE(info.st_mode) & 0o077:
+            try:
+                os.chmod(directory, 0o700)
+            except OSError:
+                return None
+        return directory
 
     def acquire(self, container_name: str) -> None:
         """Record that this process is about to use ``container_name``."""
         self.release()
-        directory = self.directory()
+        directory = self._private_directory(create=True)
+        if directory is None:
+            return
         claim = directory / f"{container_name}.{os.getpid()}"
         try:
-            directory.mkdir(parents=True, exist_ok=True)
             claim.touch()
         except OSError:
             # Unclaimable state directory: reaping then just keeps containers.
@@ -696,8 +730,11 @@ class Claim:
         found.
         """
         claimed = set()
+        directory = cls._private_directory(create=False)
+        if directory is None:
+            return claimed
         try:
-            claims = list(cls.directory().iterdir())
+            claims = list(directory.iterdir())
         except OSError:
             return claimed
 
