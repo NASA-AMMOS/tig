@@ -191,7 +191,7 @@ else
     # --occurrence stops tar at the first match, which closes the pipe and
     # ends the download early instead of pulling all 740MB. curl then reports
     # a write failure, which is the expected outcome, not an error.
-    ( cd "${TEST_WORKSPACE}" && curl -fsSL "${SAMPLE_URL}" 2>/dev/null \
+    ( cd "${TEST_WORKSPACE}" && curl --proto '=https' --proto-redir '=https' -fsSL "${SAMPLE_URL}" 2>/dev/null \
         | tar -xz --occurrence=1 "${SAMPLE_MEMBER}" ) || true
     SAMPLE="${TEST_WORKSPACE}/${SAMPLE_MEMBER}"
     if [ ! -f "${SAMPLE}" ]; then

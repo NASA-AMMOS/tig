@@ -44,12 +44,12 @@ for mission in "$@"; do
 
     # GitHub caps a release asset at 2GB, so the larger missions are split with
     # split(1) and have to be concatenated before they can be extracted.
-    if curl -fsIL -o /dev/null "${url}"; then
+    if curl --proto '=https' --proto-redir '=https' -fsIL -o /dev/null "${url}"; then
         names="${asset}"
     else
         names=""
         for suffix in ${VISOR_SPLIT_SUFFIXES}; do
-            curl -fsIL -o /dev/null "${url}${suffix}" || break
+            curl --proto '=https' --proto-redir '=https' -fsIL -o /dev/null "${url}${suffix}" || break
             names="${names} ${asset}${suffix}"
         done
     fi
@@ -69,7 +69,7 @@ for mission in "$@"; do
             exit 1
         fi
         echo "Fetching ${base_url}/${name}"
-        curl -fsSL -o "${downloads}/${name}" "${base_url}/${name}"
+        curl --proto '=https' --proto-redir '=https' -fsSL -o "${downloads}/${name}" "${base_url}/${name}"
         echo "${expected}  ${downloads}/${name}" | sha256sum -c - > /dev/null \
             || { echo "SHA-256 mismatch for ${name}" >&2; exit 1; }
         parts="${parts} ${downloads}/${name}"
