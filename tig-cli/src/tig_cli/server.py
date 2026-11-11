@@ -19,6 +19,7 @@ from __future__ import annotations
 import array
 import errno
 import os
+import re
 import secrets
 import select
 import selectors
@@ -68,13 +69,44 @@ OUTPUT_GRACE = 0.2
 # reads is slowed down rather than buffered without end.
 HIGH_WATER = 1 << 20
 
+# What Docker and Podman accept as a container name. It cannot be empty, hold
+# a separator or start with a dot, so it is always one path component of its
+# own - never ``..``.
+CONTAINER_NAME = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.-]*")
+
+
+def broker_address(container: str, home: str) -> str:
+    """Where the broker for ``container`` listens, kept inside ``home``'s cache.
+
+    Both arrive as command-line arguments, so neither may steer the socket -
+    or the directory made for it, or the stale socket removed in its place -
+    anywhere but its own directory under ``<home>/.cache/tig``.
+
+    Raises:
+        OSError: ``container`` is not a container name or ``home`` is not a
+            directory.
+    """
+    if not CONTAINER_NAME.fullmatch(container):
+        raise OSError(errno.EINVAL, f"not a container name: {container!r}")
+    home = os.path.abspath(home)
+    if not os.path.isdir(home):
+        raise OSError(errno.ENOTDIR, f"not a directory: {home!r}")
+    root = os.path.join(home, ".cache", "tig")
+    address = os.path.abspath(socket_path(home, container))
+    if (
+        not address.startswith(root + os.sep)
+        or os.path.dirname(os.path.dirname(address)) != root
+    ):
+        raise OSError(errno.EINVAL, f"broker socket outside {root!r}: {address!r}")
+    return address
+
 
 class Broker:
     """Serves one container's commands until it is idle or its agent goes."""
 
     def __init__(self, container: str, home: str):
         self.container = container
-        self.address = socket_path(home, container)
+        self.address = broker_address(container, home)
         self.token = secrets.token_hex(16)
         self.selector = selectors.SelectSelector()
         self.jobs: dict[str, Job] = {}

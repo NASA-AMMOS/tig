@@ -473,3 +473,49 @@ def _wait_for(path, timeout=30):
     while not path.exists():
         assert time.monotonic() < deadline, f"{path} never appeared"
         time.sleep(0.02)
+
+
+@pytest.mark.parametrize(
+    "container",
+    ["", ".", "..", "../escaped", "a/../../escaped", "/tmp/escaped", ".hidden",
+     "-flag", "tig vicar", "tig\x00vicar"],
+)
+def test_a_broker_refuses_a_container_name_that_is_not_one(home, container):
+    """The socket and its directory never land outside the user's cache."""
+    with pytest.raises(OSError):
+        Broker(container, str(home))
+
+    assert list(home.iterdir()) == []
+
+
+def test_a_broker_refuses_a_home_that_is_not_a_directory(home):
+    missing = home / "missing"
+    not_a_directory = home / "file"
+    not_a_directory.write_text("")
+
+    for candidate in (missing, not_a_directory):
+        with pytest.raises(OSError):
+            Broker(CONTAINER, str(candidate))
+
+    assert sorted(path.name for path in home.iterdir()) == ["file"]
+
+
+def test_a_broker_s_address_is_its_own_directory_under_the_cache(home):
+    name = "tig-vicar-0123456789ab"
+    address = server.broker_address(name, str(home / "sub" / ".."))
+
+    assert address == broker.socket_path(str(home), name)
+    assert os.path.dirname(address) == str(home / ".cache" / "tig" / name)
+
+
+def test_a_relative_home_is_made_absolute(home, monkeypatch):
+    monkeypatch.chdir(home)
+
+    address = server.broker_address(CONTAINER, ".")
+
+    assert address == broker.socket_path(str(home), CONTAINER)
+
+
+def test_the_broker_command_exits_unavailable_on_a_traversing_container(home):
+    assert broker.main(["../../escaped", str(home)]) == 69
+    assert list(home.iterdir()) == []
