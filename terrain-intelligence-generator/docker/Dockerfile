@@ -23,7 +23,7 @@ RUN dnf install -y curl tar gzip && \
 
 # Download and extract VICAR binaries
 RUN echo "Downloading VICAR binaries..." && \
-    curl -L "https://github.com/NASA-AMMOS/VICAR/releases/download/${VICAR_VERSION}/${BINARIES_FILE}" -o vicar_bin.tar.gz && \
+    curl --proto "=https" --tlsv1.2 -fL "https://github.com/NASA-AMMOS/VICAR/releases/download/${VICAR_VERSION}/${BINARIES_FILE}" -o vicar_bin.tar.gz && \
     echo "Extracting VICAR binaries..." && \
     mkdir -p /vicar/dev && \
     tar -xzf vicar_bin.tar.gz && \
@@ -50,7 +50,7 @@ RUN echo "Downloading VICAR binaries..." && \
 
 # Download and extract VICAR external libraries
 RUN echo "Downloading VICAR external libraries..." && \
-    curl -L "https://github.com/NASA-AMMOS/VICAR/releases/download/${VICAR_VERSION}/${EXTERNAL_FILE}" -o vicar_ext.tar.gz && \
+    curl --proto "=https" --tlsv1.2 -fL "https://github.com/NASA-AMMOS/VICAR/releases/download/${VICAR_VERSION}/${EXTERNAL_FILE}" -o vicar_ext.tar.gz && \
     echo "Extracting VICAR external libraries..." && \
     mkdir -p /vicar/external && \
     tar -xzf vicar_ext.tar.gz && \
