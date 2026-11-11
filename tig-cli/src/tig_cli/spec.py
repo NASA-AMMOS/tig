@@ -738,9 +738,17 @@ class Claim:
         except OSError:
             return claimed
 
+        uid = os.getuid()
         for claim in claims:
             name, _, pid = claim.name.rpartition(".")
             if not pid.isdigit():
+                continue
+            try:
+                info = os.lstat(claim)
+            except OSError:
+                continue
+            if not stat.S_ISREG(info.st_mode) or info.st_uid != uid:
+                # Planted while the directory was open to others.
                 continue
             try:
                 os.kill(int(pid), 0)

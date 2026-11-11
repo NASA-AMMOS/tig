@@ -992,6 +992,26 @@ def test_a_claim_directory_owned_by_another_user_is_not_trusted(
     assert spec.Claim.claimed_containers() == set()
 
 
+def test_claims_not_owned_by_the_user_are_ignored(home_dir, monkeypatch):
+    directory = spec.Claim.directory()
+    directory.mkdir(mode=0o700)
+    (directory / f"tig-vicar-planted.{os.getpid()}").touch()
+    (directory / f"tig-vicar-linked.{os.getpid()}").symlink_to(directory)
+    real_lstat = os.lstat
+
+    def lstat(path):
+        info = real_lstat(path)
+        if "planted" in os.fspath(path):
+            return os.stat_result(
+                info[:4] + (os.getuid() + 1,) + info[5:]
+            )
+        return info
+
+    monkeypatch.setattr(spec.os, "lstat", lstat)
+
+    assert spec.Claim.claimed_containers() == set()
+
+
 def test_claims_fall_back_to_the_temporary_directory(
     home_dir, tmp_path, monkeypatch
 ):
