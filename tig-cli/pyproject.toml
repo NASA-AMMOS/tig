@@ -23,6 +23,21 @@ dev = [
     "pytest-mock>=3.10.0",
 ]
 
+# Build and release tooling for CI, which builds with --no-build-isolation.
+# Everything is locked in uv.lock; CI installs from the hash-pinned exports
+# requirements.txt, requirements-dev.txt and requirements-release.txt. After
+# changing any dependency, run `uv lock` and the `uv export` command recorded
+# at the top of each requirements file.
+[dependency-groups]
+backend = [
+    "setuptools>=61.0",
+    "wheel",
+]
+release = [
+    "build",
+    "twine",
+]
+
 [build-system]
 requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
