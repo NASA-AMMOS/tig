@@ -13,6 +13,7 @@ spec:
       labels:
         app: ids-listener
     spec:
+      automountServiceAccountToken: false
       containers:
       - name: listener
         image: ids-listener:latest

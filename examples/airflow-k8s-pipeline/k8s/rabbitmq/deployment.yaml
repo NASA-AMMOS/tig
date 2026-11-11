@@ -61,6 +61,7 @@ spec:
       labels:
         app: rabbitmq
     spec:
+      automountServiceAccountToken: false
       containers:
       - name: rabbitmq
         image: rabbitmq:3.13-management
@@ -79,6 +80,8 @@ spec:
             command: ["rabbitmq-diagnostics", "-q", "check_port_connectivity"]
           initialDelaySeconds: 10
           periodSeconds: 10
+          # The Erlang CLI takes >1s (the default) to start under the 500m CPU limit.
+          timeoutSeconds: 5
         resources:
           requests:
             memory: "256Mi"

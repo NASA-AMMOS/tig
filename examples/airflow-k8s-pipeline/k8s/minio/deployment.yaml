@@ -30,6 +30,7 @@ spec:
       labels:
         app: minio
     spec:
+      automountServiceAccountToken: false
       # MinIO validates the AMQP target at startup, so wait for the broker.
       initContainers:
       - name: wait-for-rabbitmq
@@ -73,9 +74,13 @@ spec:
           requests:
             memory: "256Mi"
             cpu: "100m"
+            ephemeral-storage: "1Gi"
           limits:
             memory: "1Gi"
             cpu: "500m"
+            # Covers the /data emptyDir, which holds every object in the demo bucket.
+            ephemeral-storage: "4Gi"
       volumes:
       - name: data
-        emptyDir: {}
+        emptyDir:
+          sizeLimit: 4Gi

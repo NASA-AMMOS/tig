@@ -8,6 +8,7 @@ spec:
   template:
     spec:
       restartPolicy: OnFailure
+      automountServiceAccountToken: false
       containers:
       - name: seed
         image: minio/mc:RELEASE.2024-11-21T17-21-54Z
@@ -19,6 +20,13 @@ spec:
           value: "minioadmin"
         - name: MINIO_ROOT_PASSWORD
           value: "minioadmin"
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
+            memory: "128Mi"
+            cpu: "200m"
         volumeMounts:
         - name: seed-script
           mountPath: /scripts
