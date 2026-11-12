@@ -46,7 +46,9 @@ jobs:
       # The demo runs every MARS program through tig, so the CLI is a
       # prerequisite, not an optional convenience.
       - name: Install tig-cli
-        run: pip install ./tig-cli
+        run: |
+          python -m pip install --only-binary :all: --require-hashes -r tig-cli/requirements.txt
+          python -m pip install --only-binary :all: --no-deps --no-build-isolation ./tig-cli
 
       - name: Run the demo against real VISOR calibration
         run: ./terrain-intelligence-generator/test-calibration-demo.sh "${IMAGE_TAG}"
