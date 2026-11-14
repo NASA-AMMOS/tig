@@ -50,7 +50,7 @@ RUN rm -f /bin/csh && ln -s /bin/tcsh /bin/csh
 # The binaries tarball ships the sources too, so $V2TOP/mars/src/prog and
 # $V2TOP/p2/prog are available as a reference tree to copy a unit from.
 RUN echo "Downloading VICAR binaries and sources..." && \
-    curl -L "https://github.com/NASA-AMMOS/VICAR/releases/download/${VICAR_VERSION}/${BINARIES_FILE}" -o /tmp/vicar_bin.tar.gz && \
+    curl --proto "=https" --tlsv1.2 -fL "https://github.com/NASA-AMMOS/VICAR/releases/download/${VICAR_VERSION}/${BINARIES_FILE}" -o /tmp/vicar_bin.tar.gz && \
     mkdir -p ${V2TOP} && cd /tmp && tar -xzf vicar_bin.tar.gz && \
     EXTRACTED_DIR=$(ls -d vicar_open_bin_* 2>/dev/null | head -1) && \
     if [ -d "$EXTRACTED_DIR/vicar_open_${VICAR_VERSION}" ]; then \
@@ -62,7 +62,7 @@ RUN echo "Downloading VICAR binaries and sources..." && \
     echo "✓ VICAR $(du -sh ${V2TOP} | cut -f1) unpacked"
 
 RUN echo "Downloading VICAR external libraries..." && \
-    curl -L "https://github.com/NASA-AMMOS/VICAR/releases/download/${VICAR_VERSION}/${EXTERNAL_FILE}" -o /tmp/vicar_ext.tar.gz && \
+    curl --proto "=https" --tlsv1.2 -fL "https://github.com/NASA-AMMOS/VICAR/releases/download/${VICAR_VERSION}/${EXTERNAL_FILE}" -o /tmp/vicar_ext.tar.gz && \
     mkdir -p ${WORKSPACE}/external && cd /tmp && tar -xzf vicar_ext.tar.gz && \
     EXTRACTED_DIR=$(ls -d vicar_open_ext_* 2>/dev/null | head -1) && \
     CONTENT_COUNT=$(find "$EXTRACTED_DIR" -maxdepth 1 -mindepth 1 | wc -l) && \
