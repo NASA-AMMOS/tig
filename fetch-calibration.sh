@@ -147,12 +147,12 @@ human() {
 asset_parts() {
     local mission="$1" asset suffix parts=""
     asset="$(asset_name "$mission")"
-    if curl -fsIL -o /dev/null "${BASE_URL}/${asset}"; then
+    if curl --proto '=https' --proto-redir '=https' -fsIL -o /dev/null "${BASE_URL}/${asset}"; then
         echo "$asset"
         return 0
     fi
     for suffix in $VISOR_SPLIT_SUFFIXES; do
-        curl -fsIL -o /dev/null "${BASE_URL}/${asset}${suffix}" || break
+        curl --proto '=https' --proto-redir '=https' -fsIL -o /dev/null "${BASE_URL}/${asset}${suffix}" || break
         parts="${parts:+$parts }${asset}${suffix}"
     done
     echo "$parts"
@@ -161,7 +161,7 @@ asset_parts() {
 # Size of one asset in KB, from the last Content-Length of the redirect chain.
 asset_kb() {
     local length
-    length=$(curl -fsIL "${BASE_URL}/$1" \
+    length=$(curl --proto '=https' --proto-redir '=https' -fsIL "${BASE_URL}/$1" \
         | tr -d '\r' \
         | awk 'tolower($1) == "content-length:" { n = $2 } END { print n }') || return 1
     [ -n "$length" ] || return 1
@@ -278,7 +278,7 @@ download_part() {
         resuming=true
     fi
     echo "  fetching $name"
-    curl -fL --progress-bar -C - -o "$CACHE/$name" "${BASE_URL}/${name}" || status=$?
+    curl --proto '=https' --proto-redir '=https' -fL --progress-bar -C - -o "$CACHE/$name" "${BASE_URL}/${name}" || status=$?
     if [ "$status" -ne 0 ]; then
         ok=false
         # 22 (the 416 a file already at the remote length answers a resume with)
@@ -287,7 +287,7 @@ download_part() {
         if $resuming && { [ "$status" -eq 22 ] || [ "$status" -eq 33 ]; }; then
             echo "  could not resume $name; starting over"
             rm -f "$CACHE/$name"
-            curl -fL --progress-bar -o "$CACHE/$name" "${BASE_URL}/${name}" && ok=true
+            curl --proto '=https' --proto-redir '=https' -fL --progress-bar -o "$CACHE/$name" "${BASE_URL}/${name}" && ok=true
         fi
     fi
     if ! $ok; then

@@ -34,11 +34,11 @@ for mission in ${MISSIONS}; do
     asset="visor_calibration_${CALIBRATION_DATE}_${mission}.tar.gz"
 
     names=()
-    if curl -fsIL -o /dev/null "${BASE_URL}/${asset}"; then
+    if curl --proto '=https' --proto-redir '=https' -fsIL -o /dev/null "${BASE_URL}/${asset}"; then
         names=("${asset}")
     else
         for suffix in ${SPLIT_SUFFIXES}; do
-            curl -fsIL -o /dev/null "${BASE_URL}/${asset}${suffix}" || break
+            curl --proto '=https' --proto-redir '=https' -fsIL -o /dev/null "${BASE_URL}/${asset}${suffix}" || break
             names+=("${asset}${suffix}")
         done
     fi
@@ -50,7 +50,7 @@ for mission in ${MISSIONS}; do
 
     for name in "${names[@]}"; do
         echo "Hashing ${name}" >&2
-        digest=$(curl -fsSL "${BASE_URL}/${name}" | sha256sum | cut -d' ' -f1)
+        digest=$(curl --proto '=https' --proto-redir '=https' -fsSL "${BASE_URL}/${name}" | sha256sum | cut -d' ' -f1)
         echo "${digest}  ${name}" >> "${STAGED}"
     done
 done
