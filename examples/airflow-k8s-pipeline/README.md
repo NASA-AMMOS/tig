@@ -279,6 +279,8 @@ aws --endpoint-url=http://localhost:9000 s3 cp NRM_<...>FDR_<...>.VIC s3://ids-p
 │   ├── listener/
 │   │   ├── Dockerfile
 │   │   ├── listener.py          # RabbitMQ consumer + Airflow trigger
+│   │   ├── requirements.in      # Direct dependencies (pika, requests)
+│   │   ├── requirements.txt     # Hash-locked pins (pip-compile --generate-hashes)
 │   │   └── deployment.yaml
 │   ├── worker/
 │   │   └── Dockerfile           # tig-worker (TIG base + AWS CLI)
