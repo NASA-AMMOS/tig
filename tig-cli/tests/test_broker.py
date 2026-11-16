@@ -249,8 +249,11 @@ def test_a_command_reading_nothing_still_ends(session):
     assert result.stdout == b"done\n"
 
 
-def test_a_command_whose_input_never_ends_is_answered_at_once(session):
+def test_a_command_whose_input_never_ends_is_answered_at_once(session, monkeypatch):
     """A tty stdin reaches no EOF, and waiting for one would cost the grace."""
+    # A grace well beyond the jitter of starting a client process, so only
+    # waiting it out can tell the two runs apart.
+    monkeypatch.setattr(server, "OUTPUT_GRACE", 2.0)
     started = time.monotonic()
     session.run(["true"])
     with_eof = time.monotonic() - started
