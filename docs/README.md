@@ -21,6 +21,7 @@ New here? Start with **[Getting Started](getting-started.md)**.
 
 ### Architecture
 - **[Components](architecture/components.md)** — Overview of the TIG system components and VICAR capabilities.
+- **[PIG SysML model](sysml/pig/README.md)** — SysML v2 model and diagrams of the PIG geometry library that VISOR programs are built on.
 
 ### Reference
 - **[Vicario](reference/vicario.md)** — Java VicarIO library for VICAR image-format conversion.

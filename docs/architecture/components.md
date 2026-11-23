@@ -94,7 +94,9 @@ host user, with host paths translated so files resolve the same inside and out.
 - **Runtime**: TAE (Terminal Application Executive)
 
 ### MARS Terrain Tools (74 Commands)
-Specialized Mars terrain processing suite:
+Specialized Mars terrain processing suite. These programs are built on the PIG
+geometry library; see the [PIG SysML model](../sysml/pig/README.md) for its
+structure and how a program builds its camera, pointing and surface models.
 
 | Tool | Function | Input | Output |
 |------|----------|-------|--------|
