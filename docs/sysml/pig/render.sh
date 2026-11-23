@@ -4,7 +4,7 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
-models=(0*.sysml)
+models=([0-9][0-9]-*.sysml)
 out=diagrams
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT

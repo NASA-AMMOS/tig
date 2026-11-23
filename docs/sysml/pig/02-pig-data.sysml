@@ -75,15 +75,46 @@ package PigData {
 			doc /* INP parameter: one or more images, or a text list file of images (get_filelist). */
 			attribute filenames : String[1..*] ordered;
 		}
-		item def MarsProduct {
+		item def MarsProduct :> VicarImage {
 			doc /* A derived image written by a VISOR program with PIG product labels. */
 			attribute productType : ProductType;
 		}
+		item def TiepointFile { doc /* Tiepoint list (old text or XML FORMAT) written by marsautotie/marsnav, read by marsnav IN_TPT and marscorr SEEDFILE. */ }
+		item def OverlapFile { doc /* Overlap statistics XML written by marsmap OVR_OUT or marsbrt OUT_OVR; marsbrt IN_OVR reads it. */ }
+		item def OverlapList :> InputFileList { doc /* marschkovl output: one of two parallel list files naming the overlapping image pairs. */ }
+		item def RoverMaskFile { doc /* Rover-mask XML of FilterShape volumes and polygons (marsautotie MASK; see PigSupport::PointFilters). */ }
+		item def CoordSystemFile { doc /* Label or XML file giving the coordinate system of a surface mesh (SURF_CSFILE). */ }
+		item def BoundingBoxFile { doc /* CSV footprint bounding boxes written by marsmap/marsmos BBOX. */ }
+		item def FootprintColorFile { doc /* Text file mapping inputs to footprint and number colours (FOOT_COLOR). */ }
+		item def CorrelationCoefsFile { doc /* Per-pixel affine correlation coefficients (marscor3 IN_COEFS / OUT_COEFS). */ }
 		enum def ProductType {
 			enum mosaicCylindrical; enum mosaicPolar; enum mosaicVertical; enum mosaicSinusoidal;
 			enum mosaicCameraModel; enum xyz; enum uvw; enum range; enum disparity; enum slope;
 			enum roughness; enum reachability; enum mask; enum radiometric; enum mesh;
 		}
+	}
+
+	package Products {
+		doc /* VICAR images written by VISOR programs, typed by what their bands hold. */
+		private import Files::*;
+		item def MosaicImage :> MarsProduct { doc /* marsmap/marsmos mosaic in a cylindrical, polar, vertical, sinusoidal or camera projection. */ }
+		item def MosaicIndexImage :> MarsProduct { doc /* IDX_OUT: per output pixel, the 1-based input image it came from. */ }
+		item def CoregCoordImage :> MarsProduct { doc /* ICM_OUT: per output pixel, the input line/sample it came from. */ }
+		item def RadiometricImage :> MarsProduct { doc /* marsrad radiometrically corrected frame. */ }
+		item def DisparityImage :> MarsProduct { doc /* Stereo disparity: line and sample bands (or two single-band files). */ }
+		item def CorrelationMaskImage :> MarsProduct { doc /* marscorr/marscor3 MASK output: pixels where correlation was attempted. */ }
+		item def CorrelationQualityImage :> MarsProduct { doc /* OUT_QUALITY: correlation coefficient per pixel. */ }
+		item def XyzImage :> MarsProduct { doc /* XYZ point cloud: 3 bands (or x, y, z files) in the output CS. */ }
+		item def MissDistanceImage :> MarsProduct { doc /* marsxyz ERR_FILE: ray miss distance per pixel. */ }
+		item def UvwImage :> MarsProduct { doc /* Surface normals: u, v, w bands. */ }
+		item def SlopeImage :> MarsProduct { doc /* marsslope product: slope, slope heading, northerly tilt, solar energy, ... (SLOPE_TYPE). */ }
+		item def RoughnessImage :> MarsProduct { doc /* marsrough / marsirough roughness. */ }
+		item def TiltImage :> MarsProduct { doc /* marsitilt instrument-placement tilt. */ }
+		item def InstrumentNormalImage :> MarsProduct { doc /* marsitilt UIX_OUT: instrument normal if placed at this pixel (3 bands). */ }
+		item def InstrumentZImage :> MarsProduct { doc /* marsitilt ZIX_OUT: instrument Z level if placed at this pixel (1 band). */ }
+		item def InstrumentPlacementImage :> MarsProduct { doc /* marsitilt UPX_OUT / XPX_OUT: placement normal / point in P_COORD. */ }
+		item def GoodnessImage :> MarsProduct { doc /* marsigood / marsgreach combined goodness mask. */ }
+		item def ReachabilityImage :> MarsProduct { doc /* Arm reachability product read by marsgreach. */ }
 	}
 
 	package Calibration {

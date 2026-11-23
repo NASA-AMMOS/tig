@@ -42,7 +42,10 @@ depend on PIG.
 | [`05-pig-behavior.sysml`](05-pig-behavior.sysml) | `PigBehavior` | `mars_setup`, per-input model creation, camera-model creation, CS resolution, mosaic pixel loop, TIG invocation, camera-model states |
 | [`06-pig-runtime.sysml`](06-pig-runtime.sysml) | `PigRuntime` | The PIG objects inside one VISOR process after `mars_setup` |
 | [`07-pig-requirements.sysml`](07-pig-requirements.sysml) | `PigRequirements` | Requirements recovered from the code, what satisfies them, which TIG demo verifies them |
-| [`08-pig-views.sysml`](08-pig-views.sysml) | `PigViews` | The views rendered into `diagrams/` |
+| [`09-pig-support.sysml`](09-pig-support.sysml) | `PigSupport` | M2020 EDR/PDS/VICAR-label classes, point-cloud filter shapes, instrument-placement parameters, M98 radiometry, nav XML records, utilities |
+| [`10-mars-programs.sysml`](10-mars-programs.sysml) | `MarsPrograms` | Inputs, outputs and parameters of the 20 VISOR programs the TIG demos run; generated from each program's `.pdf` by [`tools/gen-programs.py`](tools/gen-programs.py) |
+| [`11-tig-pipelines.sysml`](11-tig-pipelines.sysml) | `TigPipelines` | The five demo scripts as program chains, with the file each program writes and the program that reads it |
+| [`12-pig-views.sysml`](12-pig-views.sysml) | `PigViews` | The views rendered into `diagrams/` |
 
 ## Diagrams
 
@@ -65,6 +68,18 @@ depend on PIG.
 | V16 | [mosaicPixelFlow](diagrams/mosaicPixelFlow.svg) | `marsmap` inner loop: ray, surface intersection, back-projection |
 | V17 | [cameraLifecycle](diagrams/cameraLifecycle.svg) | Calibrated, pointed, corrected and adjusting camera-model states |
 | V18 | [requirements](diagrams/requirements.svg) | Requirements with satisfy and verify links |
+| V19 | [coRegistrationPipeline](diagrams/coRegistrationPipeline.svg) | `demo-co-registration.sh`: overlaps, tiepoints, nav table |
+| V20 | [panoramaPipeline](diagrams/panoramaPipeline.svg) | `demo-panorama-mosaic.sh`: radiometry, overlap pass, brightness match, mosaic, PNG |
+| V21 | [terrainMeshPipeline](diagrams/terrainMeshPipeline.svg) | `demo-mesh-generation-with-xyz.sh`: disparity, XYZ, range filter, OBJ |
+| V22 | [surfacePipeline](diagrams/surfacePipeline.svg) | `demo-surface-characteristics.sh`: normals, slope, roughness, placement tilt and goodness |
+| V23 | [changeMonitoringPipeline](diagrams/changeMonitoringPipeline.svg) | `demo-change-monitoring.sh`: joint solve, two renders, difference, determinism check |
+| V24 | [m2020DataProducts](diagrams/m2020DataProducts.svg) | Mars 2020 EDR, PDS-label and VICAR-label families |
+| V25 | [supportClasses](diagrams/supportClasses.svg) | Filter shapes, instrument parameters, legacy radiometry, nav XML, utilities |
+| V26 | [productTypes](diagrams/productTypes.svg) | File and product types the programs read and write |
+
+The flows V12-V16 and V19-V23 carry typed data: solid arrows are item flows
+between steps, `=` lines bind a step's pin to the action's own input or output,
+dashed arrows are control flow.
 
 ![PIG model families](diagrams/modelBases.svg)
 
@@ -110,18 +125,28 @@ Install the OpenSysML CLI (`sysml`) from its
 
 ```bash
 docs/sysml/pig/render.sh
+# after a change to a program's .pdf in VICAR:
+docs/sysml/pig/tools/gen-programs.py /path/to/VICAR > docs/sysml/pig/10-mars-programs.sysml
 ```
 
 The script runs `sysml -validate` on the model and regenerates every SVG in
 `diagrams/`. The diagrams were last generated with OpenSysML v0.12.1. To browse
 the model interactively, open this directory in an editor with the OpenSysML
-language server (`sysml-lsp`), or try `sysml 0*.sysml -render PigViews::<view>`.
+language server (`sysml-lsp`), or try `sysml [0-9][0-9]-*.sysml -render PigViews::<view>`.
 
 ## Scope and limits
 
 - The core classes are modelled member by member. The mission adapters are
-  modelled at the class level (inheritance and what each factory creates). The
-  ~60 M2020 EDR/label helper classes in `pig_m20` are not modelled.
+  modelled at the class level (inheritance and what each factory creates), as
+  are the support classes in `PigSupport`. `LogFile` and `M2020PixlDpMetaData`
+  are only forward-declared in the tree and are not modelled.
+- Program I/O covers the 20 `mars*` programs the demos run, not all ~100. In each,
+  `CONFIG_PATH`, `RSF`, `SURF_MESH` and `SURF_CSFILE` are grouped in one `setup`
+  item; every other file parameter is its own pin. VICAR tools (`f2`, `stretch`,
+  `vicario`, `difpic`...) carry only the parameters the demos pass.
+- In 4 of the action diagrams Graphviz falls back to straight lines for a few
+  edges because the OpenSysML layout puts an invisible anchor on a merge node's
+  border.
 - Only the methods that callers use are modelled, not every getter.
 - The VICAR libraries other than PIG are modelled as black boxes in
   `VicarContext`. To model more of VICAR, add a package per subsystem and

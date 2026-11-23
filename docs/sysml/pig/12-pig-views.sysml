@@ -10,6 +10,7 @@ package PigViews {
 		filter @SysML::Package;
 		expose VicarContext; expose PigData; expose PigCore; expose PigMissions;
 		expose PigBehavior; expose PigRuntime; expose PigRequirements;
+		expose PigSupport; expose MarsPrograms; expose TigPipelines;
 	}
 	view <'V02'> vicarLayers {
 		attribute depth = 1;
@@ -92,5 +93,32 @@ package PigViews {
 		doc /* Requirements, what satisfies them and which demo verifies them. */
 		filter @SysML::RequirementUsage or @SysML::RequirementDefinition or @SysML::VerificationCaseDefinition or @SysML::SatisfyRequirementUsage;
 		expose PigRequirements::**;
+	}
+	view <'V19'> coRegistrationPipeline : ActionFlowView {
+		doc /* demo-co-registration.sh: which file each program writes and which program reads it. */
+		expose TigPipelines::CoRegistration;
+	}
+	view <'V20'> panoramaPipeline : ActionFlowView { expose TigPipelines::PanoramaMosaic; }
+	view <'V21'> terrainMeshPipeline : ActionFlowView { expose TigPipelines::TerrainMesh; }
+	view <'V22'> surfacePipeline : ActionFlowView { expose TigPipelines::SurfaceCharacteristics; }
+	view <'V23'> changeMonitoringPipeline : ActionFlowView { expose TigPipelines::ChangeMonitoring; }
+	view <'V24'> m2020DataProducts : GeneralView {
+		attribute depth = 1;
+		filter @SysML::Definition;
+		doc /* Mars 2020 EDR, PDS-label and VICAR-label class families. */
+		expose PigSupport::M2020Data::*;
+	}
+	view <'V25'> supportClasses : GeneralView {
+		attribute depth = 1;
+		filter @SysML::Definition;
+		doc /* Filter shapes, instrument placement, legacy radiometry, nav XML records and utilities. */
+		expose PigSupport::PointFilters::*; expose PigSupport::InstrumentPlacement::*;
+		expose PigSupport::LegacyRadiometry::*; expose PigSupport::NavXml::*; expose PigSupport::Utilities::*;
+	}
+	view <'V26'> productTypes : GeneralView {
+		attribute depth = 1;
+		filter @SysML::Definition;
+		doc /* File and product item types the programs read and write. */
+		expose PigData::Files::*; expose PigData::Products::*;
 	}
 }
