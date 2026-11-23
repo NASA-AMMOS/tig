@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """Generate 10-mars-programs.sysml from the VISOR program PDFs in a VICAR checkout.
 
-Usage: tools/gen-programs.py <VICAR checkout> > 10-mars-programs.sysml
+Usage: tools/gen-programs.py <VICAR checkout> [<output .sysml>]
+
+With an output path the file is replaced only after every PDF has been read.
 
 Every PARM of each program becomes either a typed file item (the FILES table:
 direction and item type, read from the PDF help) or a typed attribute of the
@@ -186,7 +188,7 @@ def short(h, n=150):
     return h if len(h) <= n else h[: n - 3].rstrip() + "..."
 
 
-def main(root):
+def main(root, dest=None):
     out = []
     w = out.append
     w("/*")
@@ -216,6 +218,8 @@ def main(root):
             if name in files:
                 direction, itype = files[name]
                 flags = " ordered" if ordered else ""
+                if p["default"] and p["default"] != "--":
+                    help_ = f"{help_} (default {p['default'].strip(chr(34))})"
                 if name in SETUP:
                     setup.append(f"\t\tref item {ident(name)} : {itype}{mult}{flags} {{ doc /* {name}: {help_} */ }}")
                     continue
@@ -262,10 +266,17 @@ def main(root):
         w(f"\t\tin attribute params : {params};")
         w("\t}")
     w("}")
-    print("\n".join(out))
+    text = "\n".join(out) + "\n"
+    if dest is None:
+        sys.stdout.write(text)
+        return
+    tmp = dest + ".tmp"
+    with open(tmp, "w") as f:
+        f.write(text)
+    os.replace(tmp, dest)
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 2:
+    if len(sys.argv) not in (2, 3):
         sys.exit(__doc__)
-    main(sys.argv[1])
+    main(*sys.argv[1:])

@@ -128,7 +128,7 @@ Install the OpenSysML CLI (`sysml`) from its
 ```bash
 docs/sysml/pig/render.sh
 # after a change to a program's .pdf in VICAR:
-docs/sysml/pig/tools/gen-programs.py /path/to/VICAR > docs/sysml/pig/10-mars-programs.sysml
+docs/sysml/pig/tools/gen-programs.py /path/to/VICAR docs/sysml/pig/10-mars-programs.sysml
 ```
 
 The script runs `sysml -validate` on the model and regenerates every SVG in

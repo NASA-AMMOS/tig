@@ -40,7 +40,7 @@ package MarsPrograms {
 	item def MarschkovlSetupFiles :> MarsSetupFiles {
 		ref item surf_mesh : MeshFile[0..1] { doc /* SURF_MESH: Mesh file for surface model */ }
 		ref item surf_csfile : CoordSystemFile[0..1] { doc /* SURF_CSFILE: File containing CS for surface model */ }
-		ref item config_path : MarsConfigTree { doc /* CONFIG_PATH: Path used to find configuration/calibration files */ }
+		ref item config_path : MarsConfigTree { doc /* CONFIG_PATH: Path used to find configuration/calibration files (default $MARS_CONFIG_PATH) */ }
 		ref item rsf : RoverStateFile[0..100] ordered { doc /* RSF: Rover State File(s) to use */ }
 	}
 	action def marschkovl {
@@ -107,7 +107,7 @@ package MarsPrograms {
 	item def MarsautotieSetupFiles :> MarsSetupFiles {
 		ref item surf_mesh : MeshFile[0..1] { doc /* SURF_MESH: Mesh file for surface model */ }
 		ref item surf_csfile : CoordSystemFile[0..1] { doc /* SURF_CSFILE: File containing CS for surface model */ }
-		ref item config_path : MarsConfigTree { doc /* CONFIG_PATH: Path used to find configuration/calibration files */ }
+		ref item config_path : MarsConfigTree { doc /* CONFIG_PATH: Path used to find configuration/calibration files (default $MARS_CONFIG_PATH) */ }
 		ref item rsf : RoverStateFile[0..100] ordered { doc /* RSF: Rover State File(s) to use */ }
 	}
 	action def marsautotie {
@@ -180,7 +180,7 @@ package MarsPrograms {
 	item def MarsnavSetupFiles :> MarsSetupFiles {
 		ref item surf_mesh : MeshFile[0..1] { doc /* SURF_MESH: Mesh file for surface model */ }
 		ref item surf_csfile : CoordSystemFile[0..1] { doc /* SURF_CSFILE: File containing CS for surface model */ }
-		ref item config_path : MarsConfigTree { doc /* CONFIG_PATH: Path used to find configuration/calibration files */ }
+		ref item config_path : MarsConfigTree { doc /* CONFIG_PATH: Path used to find configuration/calibration files (default $MARS_CONFIG_PATH) */ }
 		ref item rsf : RoverStateFile[0..100] ordered { doc /* RSF: Rover State File(s) to use */ }
 	}
 	action def marsnav {
@@ -188,7 +188,7 @@ package MarsPrograms {
 		in item inp : InputFileList[1..200] ordered { doc /* INP: Input image(s) or file list */ }
 		out item 'out' : NavFile { doc /* OUT: Output navigation table */ }
 		in item in_tpt : TiepointFile[0..1] { doc /* IN_TPT: Input tiepoint file */ }
-		out item out_tpt : TiepointFile { doc /* OUT_TPT: Output tiepoint file */ }
+		out item out_tpt : TiepointFile { doc /* OUT_TPT: Output tiepoint file (default tptlist.tpt) */ }
 		in item navtable : NavFile[0..1] { doc /* NAVTABLE: Input navigation table */ }
 		in item setup : MarsnavSetupFiles;
 		in attribute params : MarsnavParams;
@@ -272,7 +272,7 @@ package MarsPrograms {
 		attribute do_bboxcheck : Marsnav2DoBboxcheck default = Marsnav2DoBboxcheck::'NO_BBOXCHECK' { doc /* Check if an optimized point falls outside the bounding box created by all pairwise midpoint estimtes */ }
 	}
 	item def Marsnav2SetupFiles :> MarsSetupFiles {
-		ref item config_path : MarsConfigTree { doc /* CONFIG_PATH: Path used to find configuration/calibration files */ }
+		ref item config_path : MarsConfigTree { doc /* CONFIG_PATH: Path used to find configuration/calibration files (default $MARS_CONFIG_PATH) */ }
 		ref item rsf : RoverStateFile[0..100] ordered { doc /* RSF: Rover State File(s) to use */ }
 	}
 	action def marsnav2 {
@@ -280,7 +280,7 @@ package MarsPrograms {
 		in item inp : InputFileList[1..200] ordered { doc /* INP: Input image(s) or file list */ }
 		out item 'out' : NavFile { doc /* OUT: Output navigation table */ }
 		in item in_tpt : TiepointFile[0..1] { doc /* IN_TPT: Input tiepoint file */ }
-		out item out_tpt : TiepointFile { doc /* OUT_TPT: Output tiepoint file */ }
+		out item out_tpt : TiepointFile { doc /* OUT_TPT: Output tiepoint file (default tptlist.tpt) */ }
 		in item navtable : NavFile[0..1] { doc /* NAVTABLE: Input navigation table */ }
 		out item out_bad : TiepointFile[0..1] { doc /* OUT_BAD: Save tiepoints with given error to file */ }
 		in item setup : Marsnav2SetupFiles;
@@ -319,7 +319,7 @@ package MarsPrograms {
 		attribute fixed_site : Integer[0..1] { doc /* Which site is FIXED for rover missions */ }
 	}
 	item def MarsradSetupFiles :> MarsSetupFiles {
-		ref item config_path : MarsConfigTree { doc /* CONFIG_PATH: Path used to find configuration/calibration files */ }
+		ref item config_path : MarsConfigTree { doc /* CONFIG_PATH: Path used to find configuration/calibration files (default $MARS_CONFIG_PATH) */ }
 		ref item rsf : RoverStateFile[0..100] ordered { doc /* RSF: Rover State File(s) to use */ }
 	}
 	action def marsrad {
@@ -443,7 +443,7 @@ package MarsPrograms {
 	item def MarsmapSetupFiles :> MarsSetupFiles {
 		ref item surf_mesh : MeshFile[0..1] { doc /* SURF_MESH: Mesh file for surface model */ }
 		ref item surf_csfile : CoordSystemFile[0..1] { doc /* SURF_CSFILE: File containing CS for surface model */ }
-		ref item config_path : MarsConfigTree { doc /* CONFIG_PATH: Path used to find configuration/calibration files */ }
+		ref item config_path : MarsConfigTree { doc /* CONFIG_PATH: Path used to find configuration/calibration files (default $MARS_CONFIG_PATH) */ }
 		ref item rsf : RoverStateFile[0..100] ordered { doc /* RSF: Rover State File(s) to use */ }
 	}
 	action def marsmap {
@@ -536,7 +536,7 @@ package MarsPrograms {
 	item def MarsmosSetupFiles :> MarsSetupFiles {
 		ref item surf_mesh : MeshFile[0..1] { doc /* SURF_MESH: Mesh file for surface model */ }
 		ref item surf_csfile : CoordSystemFile[0..1] { doc /* SURF_CSFILE: File containing CS for surface model */ }
-		ref item config_path : MarsConfigTree { doc /* CONFIG_PATH: Path used to find configuration/calibration files */ }
+		ref item config_path : MarsConfigTree { doc /* CONFIG_PATH: Path used to find configuration/calibration files (default $MARS_CONFIG_PATH) */ }
 		ref item rsf : RoverStateFile[0..100] ordered { doc /* RSF: Rover State File(s) to use */ }
 	}
 	action def marsmos {
@@ -611,7 +611,7 @@ package MarsPrograms {
 	item def MarsbrtSetupFiles :> MarsSetupFiles {
 		ref item surf_mesh : MeshFile[0..1] { doc /* SURF_MESH: Mesh file for surface model */ }
 		ref item surf_csfile : CoordSystemFile[0..1] { doc /* SURF_CSFILE: File containing CS for surface */ }
-		ref item config_path : MarsConfigTree { doc /* CONFIG_PATH: Path used to find configuration/calibration files */ }
+		ref item config_path : MarsConfigTree { doc /* CONFIG_PATH: Path used to find configuration/calibration files (default $MARS_CONFIG_PATH) */ }
 		ref item rsf : RoverStateFile[0..100] ordered { doc /* RSF: Rover State File(s) to use */ }
 	}
 	action def marsbrt {
@@ -781,7 +781,7 @@ package MarsPrograms {
 		attribute solution_id : String[0..1] { doc /* Solution ID to use for COORD_INDEX */ }
 	}
 	item def MarsxyzSetupFiles :> MarsSetupFiles {
-		ref item config_path : MarsConfigTree { doc /* CONFIG_PATH: Path used to find configuration/calibration files */ }
+		ref item config_path : MarsConfigTree { doc /* CONFIG_PATH: Path used to find configuration/calibration files (default $MARS_CONFIG_PATH) */ }
 		ref item rsf : RoverStateFile[0..100] ordered { doc /* RSF: Rover State File(s) to use */ }
 	}
 	action def marsxyz {
@@ -839,7 +839,7 @@ package MarsPrograms {
 		attribute target_type : String[0..1] { doc /* Specifies the type of a named target */ }
 	}
 	item def MarsrfiltSetupFiles :> MarsSetupFiles {
-		ref item config_path : MarsConfigTree { doc /* CONFIG_PATH: Path used to find configuration/calibration files */ }
+		ref item config_path : MarsConfigTree { doc /* CONFIG_PATH: Path used to find configuration/calibration files (default $MARS_CONFIG_PATH) */ }
 		ref item rsf : RoverStateFile[0..100] ordered { doc /* RSF: Rover State File(s) to use */ }
 	}
 	action def marsrfilt {
@@ -910,7 +910,7 @@ package MarsPrograms {
 		attribute solution_id : String[0..1] { doc /* Solution ID to use for COORD_INDEX */ }
 	}
 	item def MarsmeshSetupFiles :> MarsSetupFiles {
-		ref item config_path : MarsConfigTree { doc /* CONFIG_PATH: Path used to find configuration/calibration files */ }
+		ref item config_path : MarsConfigTree { doc /* CONFIG_PATH: Path used to find configuration/calibration files (default $MARS_CONFIG_PATH) */ }
 		ref item rsf : RoverStateFile[0..100] ordered { doc /* RSF: Rover State File(s) to use */ }
 	}
 	action def marsmesh {
@@ -961,7 +961,7 @@ package MarsPrograms {
 		attribute solution_id : String[0..1] { doc /* Solution ID to use for COORD_INDEX */ }
 	}
 	item def MarsuvwSetupFiles :> MarsSetupFiles {
-		ref item config_path : MarsConfigTree { doc /* CONFIG_PATH: Path used to find configuration/calibration files */ }
+		ref item config_path : MarsConfigTree { doc /* CONFIG_PATH: Path used to find configuration/calibration files (default $MARS_CONFIG_PATH) */ }
 		ref item rsf : RoverStateFile[0..100] ordered { doc /* RSF: Rover State File(s) to use */ }
 	}
 	action def marsuvw {
@@ -1000,7 +1000,7 @@ package MarsPrograms {
 		attribute solution_id : String[0..1] { doc /* Solution ID to use for COORD_INDEX */ }
 	}
 	item def MarsslopeSetupFiles :> MarsSetupFiles {
-		ref item config_path : MarsConfigTree { doc /* CONFIG_PATH: Path used to find configuration/calibration files */ }
+		ref item config_path : MarsConfigTree { doc /* CONFIG_PATH: Path used to find configuration/calibration files (default $MARS_CONFIG_PATH) */ }
 		ref item rsf : RoverStateFile[0..100] ordered { doc /* RSF: Rover State File(s) to use */ }
 	}
 	action def marsslope {
@@ -1045,7 +1045,7 @@ package MarsPrograms {
 		attribute solution_id : String[0..1] { doc /* Solution ID to use for COORD_INDEX */ }
 	}
 	item def MarsroughSetupFiles :> MarsSetupFiles {
-		ref item config_path : MarsConfigTree { doc /* CONFIG_PATH: Path used to find configuration/calibration files */ }
+		ref item config_path : MarsConfigTree { doc /* CONFIG_PATH: Path used to find configuration/calibration files (default $MARS_CONFIG_PATH) */ }
 		ref item rsf : RoverStateFile[0..100] ordered { doc /* RSF: Rover State File(s) to use */ }
 	}
 	action def marsrough {
@@ -1100,7 +1100,7 @@ package MarsPrograms {
 		attribute solution_id : String[0..1] { doc /* Solution ID to use for COORD_INDEX */ }
 	}
 	item def MarsitiltSetupFiles :> MarsSetupFiles {
-		ref item config_path : MarsConfigTree { doc /* CONFIG_PATH: Path used to find configuration/calibration files */ }
+		ref item config_path : MarsConfigTree { doc /* CONFIG_PATH: Path used to find configuration/calibration files (default $MARS_CONFIG_PATH) */ }
 		ref item rsf : RoverStateFile[0..100] ordered { doc /* RSF: Rover State File(s) to use */ }
 	}
 	action def marsitilt {
@@ -1168,7 +1168,7 @@ package MarsPrograms {
 		attribute target_type : String[0..1] { doc /* Specifies the type of a named target */ }
 	}
 	item def MarsiroughSetupFiles :> MarsSetupFiles {
-		ref item config_path : MarsConfigTree { doc /* CONFIG_PATH: Path used to find configuration/calibration files */ }
+		ref item config_path : MarsConfigTree { doc /* CONFIG_PATH: Path used to find configuration/calibration files (default $MARS_CONFIG_PATH) */ }
 		ref item rsf : RoverStateFile[0..100] ordered { doc /* RSF: Rover State File(s) to use */ }
 	}
 	action def marsirough {
@@ -1204,7 +1204,7 @@ package MarsPrograms {
 		attribute target_type : String[0..1] { doc /* Specifies the type of a named target */ }
 	}
 	item def MarsigoodSetupFiles :> MarsSetupFiles {
-		ref item config_path : MarsConfigTree { doc /* CONFIG_PATH: Path used to find configuration/calibration files */ }
+		ref item config_path : MarsConfigTree { doc /* CONFIG_PATH: Path used to find configuration/calibration files (default $MARS_CONFIG_PATH) */ }
 	}
 	action def marsigood {
 		doc /* VICAR program MARSIGOOD */
@@ -1241,7 +1241,7 @@ package MarsPrograms {
 		attribute solution_id : String[0..1] { doc /* Solution ID to use for COORD_INDEX */ }
 	}
 	item def MarsgreachSetupFiles :> MarsSetupFiles {
-		ref item config_path : MarsConfigTree { doc /* CONFIG_PATH: Path used to find configuration/calibration files */ }
+		ref item config_path : MarsConfigTree { doc /* CONFIG_PATH: Path used to find configuration/calibration files (default $MARS_CONFIG_PATH) */ }
 		ref item rsf : RoverStateFile[0..100] ordered { doc /* RSF: Rover State File(s) to use */ }
 	}
 	action def marsgreach {
