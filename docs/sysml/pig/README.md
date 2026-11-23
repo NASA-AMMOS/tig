@@ -74,8 +74,10 @@ depend on PIG.
 | V22 | [surfacePipeline](diagrams/surfacePipeline.svg) | `demo-surface-characteristics.sh`: normals, slope, roughness, placement tilt and goodness |
 | V23 | [changeMonitoringPipeline](diagrams/changeMonitoringPipeline.svg) | `demo-change-monitoring.sh`: joint solve, two renders, difference, determinism check |
 | V24 | [m2020DataProducts](diagrams/m2020DataProducts.svg) | Mars 2020 EDR, PDS-label and VICAR-label families |
-| V25 | [supportClasses](diagrams/supportClasses.svg) | Filter shapes, instrument parameters, legacy radiometry, nav XML, utilities |
-| V26 | [productTypes](diagrams/productTypes.svg) | File and product types the programs read and write |
+| V25 | [pointFilters](diagrams/pointFilters.svg) | `FilterShape` family read from rover-mask XML |
+| V26 | [supportClasses](diagrams/supportClasses.svg) | Instrument parameters, legacy radiometry, nav XML records, utilities |
+| V27 | [fileTypes](diagrams/fileTypes.svg) | File types PIG and the programs read and write |
+| V28 | [productTypes](diagrams/productTypes.svg) | Image products the programs write |
 
 The flows V12-V16 and V19-V23 carry typed data: solid arrows are item flows
 between steps, `=` lines bind a step's pin to the action's own input or output,

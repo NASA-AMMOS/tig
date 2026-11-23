@@ -108,17 +108,29 @@ package PigViews {
 		doc /* Mars 2020 EDR, PDS-label and VICAR-label class families. */
 		expose PigSupport::M2020Data::*;
 	}
-	view <'V25'> supportClasses : GeneralView {
+	view <'V25'> pointFilters : GeneralView {
 		attribute depth = 1;
 		filter @SysML::Definition;
-		doc /* Filter shapes, instrument placement, legacy radiometry, nav XML records and utilities. */
-		expose PigSupport::PointFilters::*; expose PigSupport::InstrumentPlacement::*;
-		expose PigSupport::LegacyRadiometry::*; expose PigSupport::NavXml::*; expose PigSupport::Utilities::*;
+		doc /* Point-cloud and image mask shapes read from rover-mask XML. */
+		expose PigSupport::PointFilters::*;
 	}
-	view <'V26'> productTypes : GeneralView {
+	view <'V26'> supportClasses : GeneralView {
 		attribute depth = 1;
 		filter @SysML::Definition;
-		doc /* File and product item types the programs read and write. */
-		expose PigData::Files::*; expose PigData::Products::*;
+		doc /* Instrument placement, legacy radiometry, nav XML records and utilities. */
+		expose PigSupport::InstrumentPlacement::*; expose PigSupport::LegacyRadiometry::*;
+		expose PigSupport::NavXml::*; expose PigSupport::Utilities::*;
+	}
+	view <'V27'> fileTypes : GeneralView {
+		attribute depth = 1;
+		filter @SysML::Definition;
+		doc /* File types PIG and the programs read and write. */
+		expose PigData::Files::*;
+	}
+	view <'V28'> productTypes : GeneralView {
+		attribute depth = 1;
+		filter @SysML::Definition;
+		doc /* Image products the programs write. */
+		expose PigData::Files::VicarImage; expose PigData::Files::MarsProduct; expose PigData::Products::*;
 	}
 }

@@ -15,7 +15,7 @@ render=(-render-form dot -render-style cameo -render-compartments most)
 
 # OpenSysML lays out ortho views itself and names the Graphviz engine in a
 # "// layout:" header (neato -n2 for pre-positioned views).
-sysml "${models[@]}" -render-all "$tmp" "${render[@]}" -render-lines ortho >/dev/null
+OPENSYSML_DOT="$PWD/tools/dot-unflatten.sh" sysml "${models[@]}" -render-all "$tmp" "${render[@]}" -render-lines ortho >/dev/null
 
 # The requirements graph reads better left to right, which needs Graphviz to
 # lay it out; ortho routing there needs edge labels as xlabels.

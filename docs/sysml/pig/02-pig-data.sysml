@@ -96,7 +96,7 @@ package PigData {
 
 	package Products {
 		doc /* VICAR images written by VISOR programs, typed by what their bands hold. */
-		private import Files::*;
+		private import Files::MarsProduct;
 		item def MosaicImage :> MarsProduct { doc /* marsmap/marsmos mosaic in a cylindrical, polar, vertical, sinusoidal or camera projection. */ }
 		item def MosaicIndexImage :> MarsProduct { doc /* IDX_OUT: per output pixel, the 1-based input image it came from. */ }
 		item def CoregCoordImage :> MarsProduct { doc /* ICM_OUT: per output pixel, the input line/sample it came from. */ }
