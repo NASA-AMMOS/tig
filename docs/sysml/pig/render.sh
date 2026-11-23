@@ -14,14 +14,16 @@ sysml "${models[@]}" -validate
 sysml "${models[@]}" -render-all "$tmp" -render-form dot -render-style cameo \
   -render-compartments most >/dev/null
 
-rm -rf "$out"
-mkdir -p "$out"
+mkdir "$tmp/svg"
 for f in "$tmp"/PigViews.*.dot; do
   name=$(basename "$f" .dot)
   name=${name#PigViews.}
   args=()
   [[ $name == requirements ]] && args=(-Grankdir=LR)
-  dot "${args[@]}" -Tsvg "$f" -o "$out/$name.svg"
+  dot "${args[@]}" -Tsvg "$f" -o "$tmp/svg/$name.svg"
 done
+
+rm -rf "$out"
+mv "$tmp/svg" "$out"
 
 echo "wrote $(ls "$out" | wc -l) files to $(pwd)/$out"
